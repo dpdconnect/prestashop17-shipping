@@ -1,0 +1,14 @@
+{
+    "name": "dpdconnect/prestashop-shipping",
+    "description": "DPD Prestashop shipping extension",
+    "license": "GPL-3.0-or-later",
+    "minimum-stability": "dev",
+    "require": {
+        "dpdconnect/php-sdk": "0.1.1"
+    },
+    "autoload": {
+	"psr-4": {
+	    "DpdConnect\\classes\\": ["classes"]
+	}
+    }
+}

@@ -1,0 +1,64 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "d3aece9a2855563bdb20567b045778b9",
+    "packages": [
+        {
+            "name": "dpdconnect/php-sdk",
+            "version": "0.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dpdconnect/php-sdk.git",
+                "reference": "1c339b7c8d351404dd3283dfbd5fa04bcb2dd156"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dpdconnect/php-sdk/zipball/1c339b7c8d351404dd3283dfbd5fa04bcb2dd156",
+                "reference": "1c339b7c8d351404dd3283dfbd5fa04bcb2dd156",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "php": "^5.5 || ^7.0"
+            },
+            "require-dev": {
+                "donatj/mock-webserver": "^2.0",
+                "overtrue/phplint": "^1.1",
+                "phpunit/phpunit": "~6.5.0",
+                "squizlabs/php_codesniffer": "^3.0@dev",
+                "symfony/yaml": "^4.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "DpdConnect\\Sdk\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "OSL-3.0"
+            ],
+            "authors": [
+                {
+                    "name": "DPD",
+                    "email": "pluginsupport@dpd.nl",
+                    "homepage": "http://www.dpd.nl"
+                }
+            ],
+            "description": "DPD Connect PHP SDK",
+            "time": "2019-05-28T14:38:11+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "dev",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

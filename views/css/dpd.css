@@ -1,0 +1,36 @@
+.dpdTag {
+    padding: 5px 10px 5px 10px;
+    color: white;
+    background-color: gray;
+    border-radius: 4px 4px;
+    margin-right: 5px;
+}
+
+.bootstrap .dpdTagUrl:hover,
+.bootstrap .dpdTagUrl:focus {
+    text-decoration: none;
+}
+
+.dpdTag.request {
+    background-color: #e79520;
+}
+
+.dpdTag.queued {
+    background-color: #e79520;
+}
+
+.dpdTag.processing {
+    background-color: #e79520;
+}
+
+.dpdTag.success {
+    background-color: #3C933C;
+}
+
+.dpdTag.failed {
+    background-color: #E3503E;
+}
+
+.dpdTag.partial {
+    background-color: #E3503E;
+}
