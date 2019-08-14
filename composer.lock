@@ -4,24 +4,23 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d3aece9a2855563bdb20567b045778b9",
+    "content-hash": "db7563b18fcaccaebcd507245dc8da08",
     "packages": [
         {
             "name": "dpdconnect/php-sdk",
-            "version": "0.1.1",
+            "version": "1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dpdconnect/php-sdk.git",
-                "reference": "1c339b7c8d351404dd3283dfbd5fa04bcb2dd156"
+                "reference": "bdccdc7dba392ca49dfc32eeb386d6c35d435099"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dpdconnect/php-sdk/zipball/1c339b7c8d351404dd3283dfbd5fa04bcb2dd156",
-                "reference": "1c339b7c8d351404dd3283dfbd5fa04bcb2dd156",
+                "url": "https://api.github.com/repos/dpdconnect/php-sdk/zipball/bdccdc7dba392ca49dfc32eeb386d6c35d435099",
+                "reference": "bdccdc7dba392ca49dfc32eeb386d6c35d435099",
                 "shasum": ""
             },
             "require": {
-                "ext-curl": "*",
                 "ext-json": "*",
                 "php": "^5.5 || ^7.0"
             },
@@ -32,7 +31,7 @@
                 "squizlabs/php_codesniffer": "^3.0@dev",
                 "symfony/yaml": "^4.2"
             },
-            "type": "library",
+            "type": "magento2-library",
             "autoload": {
                 "psr-4": {
                     "DpdConnect\\Sdk\\": "src/"
@@ -49,8 +48,8 @@
                     "homepage": "http://www.dpd.nl"
                 }
             ],
-            "description": "DPD Connect PHP SDK",
-            "time": "2019-05-28T14:38:11+00:00"
+            "description": "DPD Magento2 Shipping extension",
+            "time": "2019-08-14T11:40:01+00:00"
         }
     ],
     "packages-dev": [],
