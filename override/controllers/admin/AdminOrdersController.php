@@ -76,9 +76,14 @@ class AdminOrdersController extends AdminOrdersControllerCore
         }
     }
 
-    public function setMedia()
+    public function setMedia($isNewTheme = false)
     {
-        parent::setMedia();
+        if (version_compare(AppKernel::VERSION, '1.7.4.0') >= 0) {
+            parent::setMedia($isNewTheme);
+        } else {
+            parent::setMedia();
+        }
+
         $this->addJS(_PS_MODULE_DIR_ . 'dpdconnect/views/js/dpd.js');
     }
 }

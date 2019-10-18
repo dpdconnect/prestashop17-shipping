@@ -227,7 +227,6 @@ class DpdLabelGenerator
 
         $shipment = [
             'orderId' => $orderId,
-            'smallParcelNumber' => Configuration::get('dpdconnect_spr'),
             'sendingDepot' => Configuration::get('dpdconnect_depot'),
             'sender' => [
                 'name1' => Configuration::get('dpdconnect_company'),
@@ -340,6 +339,7 @@ class DpdLabelGenerator
             'city' => $address->city,
             'country' => $country->iso_code,
             'commercialAddress' => false,
+            'sprn' => Configuration::get('dpdconnect_spr'),
         ];
 
         $shipment['customs']['customsLines'] = $customsLines;

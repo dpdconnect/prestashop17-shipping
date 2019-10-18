@@ -22,6 +22,7 @@ namespace DpdConnect\classes;
  */
 
 use Db;
+use DpdConnect\Sdk\Exceptions\AuthenticateException;
 use Order;
 use Carrier;
 use DbQuery;
@@ -30,9 +31,13 @@ use DpdConnect\classes\Version;
 use DpdConnect\Sdk\ClientBuilder;
 use DpdConnect\Sdk\Objects\MetaData;
 use DpdConnect\Sdk\Objects\ObjectFactory;
+use PrestaShop\PrestaShop\Adapter\LegacyLogger;
 
 class DpdParcelPredict
 {
+    /**
+     * @var \DpdConnect\Sdk\Client
+     */
     public $dpdClient;
     public $Gmaps;
     public $DpdAuthentication;
@@ -65,22 +70,23 @@ class DpdParcelPredict
         if (!$postalCode) {
             return;
         }
+
+        try {
         $coordinates = $this->getGeoData($postalCode, $isoCode);
         $coordinates['countryIso'] = $isoCode;
         $parcelShops = $this->dpdClient->getParcelShop()->getList($coordinates);
+        } catch (AuthenticateException $exception) {
+            // Log error to the database
+            \PrestaShopLoggerCore::addLog($exception->getMessage(), 3, null, 'DPDConnect');
+            return false;
+        }
         return $parcelShops;
     }
 
 
     public function getParcelShopId($orderId)
     {
-        $query = Db::getInstance()->getValue("SELECT parcelshop_id FROM " . _DB_PREFIX_ . "parcelshop WHERE order_id = " . pSQL($orderId));
-
-        if (count($query) === 0) {
-            return null;
-        }
-
-        return $query;
+        return Db::getInstance()->getValue("SELECT parcelshop_id FROM " . _DB_PREFIX_ . "parcelshop WHERE order_id = " . pSQL($orderId));
     }
 
     public function checkIfDpdSending($orderId)

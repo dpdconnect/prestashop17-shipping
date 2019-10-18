@@ -88,6 +88,8 @@ class DpdCheckoutDeliveryStep extends CheckoutDeliveryStep
             return $templates;
         }
 
+        $link = new \Link();
+
         $parcelShopInfo = array(
             'baseUri' => __PS_BASE_URI__,
             'parcelshopId' => $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_parcelshop")),
@@ -98,7 +100,10 @@ class DpdCheckoutDeliveryStep extends CheckoutDeliveryStep
             'cookieParcelId' => $this->context->cookie->parcelId,
         );
         $this->context->smarty->assign($parcelShopInfo);
-        $this->context->smarty->assign('parcelshops', $parcelShops);
+        $this->context->smarty->assign([
+            'parcelshops' => $parcelShops,
+            'oneStepParcelshopUrl' => $link->getModuleLink('dpdconnect', 'OneStepParcelshop')
+        ]);
 
         $templates .= $this->renderTemplate(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . '1.7' . DIRECTORY_SEPARATOR . '_dpdLocator1.7.tpl');
 

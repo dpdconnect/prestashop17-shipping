@@ -73,7 +73,7 @@
                 jQuery("#parcel-id").on('change', function () {
                     jQuery.ajax({
                         type: 'POST',
-                        url: baseUri + 'module/dpdconnect/OneStepParcelshop',
+                        url: '{/literal}{$oneStepParcelshopUrl nofilter}{literal}',
                         data: 'method=setParcelShop&parcelId=' + jQuery(this).val() + '&parcelShopSenderId=' + parcelshopId + '&sender=' + sender,
                         dataType: 'json'
                     });

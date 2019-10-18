@@ -53,7 +53,6 @@ class dpdconnect extends Module
         'displayAdminOrderTabOrder',
         'displayAdminOrderContentOrder',
         'actionAdminBulkAffectZoneAfter',
-        'displayCarrierList',
         'actionCarrierProcess',
         'displayOrderConfirmation',
         'displayBeforeCarrier',
@@ -354,7 +353,8 @@ class dpdconnect extends Module
                 ],
                 [
                     'type' => 'text',
-                    'label' => $this->l('SPR'),
+                    'label' => $this->l('SPRN'),
+                    'hint' => $this->l('Heeft u een registratienummer van HMRC (douane in UK) beschikbaar, vul deze dan hier in: https://www.gov.uk/guidance/register-for-import-vat-on-parcels-you-sell-to-uk-buyers'),
                     'name' => 'spr',
                     'required' => false
                 ],
@@ -508,34 +508,6 @@ class dpdconnect extends Module
             ]);
             return $this->display(__FILE__, '_adminOrderTabLabels.tpl');
         }
-    }
-
-
-    public function hookDisplayCarrierList($params)
-    {
-        if ($params['cart']->id_carrier == $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect"))) {
-            $country = new Country($params['address']->id_country);
-            $isoCode = $country->iso_code;
-
-            $geoData = $this->dpdParcelPredict->getGeoData($params['address']->postcode, $isoCode);
-            $parcelShops = $this->dpdParcelPredict->getParcelShops($params['address']->postcode, $isoCode);
-        }
-
-        $this->context->controller->addCSS(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'dpdLocator.css');
-        $this->context->smarty->assign([
-            'parcelshopId' => $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_parcelshop")),
-            'sender' => $params['cart']->id_carrier,
-            'key' => Configuration::get('gmaps_client_key'),
-            'longitude' => $geoData['longitude'],
-            'latitude' => $geoData['latitude'],
-            'parcelshops' => $parcelShops,
-            'saturdaySenderIsAllowed' => (int)$this->dpdCarrier->checkIfSaturdayAllowed(),
-            'saturdaySender' => (int)$this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_saturday")),
-            'classicSaturdaySender' => (int)$this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_classic_saturday")),
-            'cookieParcelId' => $this->context->cookie->parcelId,
-        ]);
-
-        return $this->display(__FILE__, '_dpdLocator.tpl');
     }
 
 
