@@ -234,7 +234,7 @@ class DpdLabelGenerator
                 'country' => Configuration::get('dpdconnect_country'),
                 'postalcode' => Configuration::get('dpdconnect_postalcode'),
                 'city' => Configuration::get('dpdconnect_place'),
-                'phone' => Configuration::get('PS_SHOP_PHONE'),
+                'phoneNumber' => Configuration::get('PS_SHOP_PHONE'),
                 'email' => Configuration::get('dpdconnect_email'),
                 'commercialAddress' => true,
                 'vat_number' => Configuration::get('dpdconnect_vatnumber'),
@@ -246,7 +246,7 @@ class DpdLabelGenerator
                 'country' => $country->iso_code,
                 'postalcode' => $address->postcode, // No spaces in zipCode!
                 'city' => $address->city,
-                'phone' => $phone,
+                'phoneNumber' => $phone,
                 'commercialAddress' => false,
             ],
             'product' => [
@@ -256,19 +256,19 @@ class DpdLabelGenerator
         ];
 
         if ($this->dpdParcelPredict->checkIfPredictCarrier($orderId) || $this->dpdParcelPredict->checkIfSaturdayCarrier($orderId)) {
-            $shipment['shipments']['notifications'][] = [
+            $shipment['notifications'][] = [
                 'subject' => 'predict',
-                'channel' => 'email',
+                'channel' => 'EMAIL',
                 'value' => $customer->email,
             ];
         }
 
         if ($this->dpdParcelPredict->checkifParcelCarrier($orderId)) {
             $parcelShopID = $this->dpdParcelPredict->getParcelShopId($orderId);
-            $shipment['shipments']['product']['parcelshopId'] = $parcelShopID;
-            $shipment['shipments']['notifications'][] = [
+            $shipment['product']['parcelshopId'] = $parcelShopID;
+            $shipment['notifications'][] = [
                 'subject' => 'parcelshop',
-                'channel' => 'email',
+                'channel' => 'EMAIL',
                 'value' => $customer->email,
             ];
         }
@@ -311,7 +311,7 @@ class DpdLabelGenerator
             $amount = $customsValue * $row['product_quantity'];
             $totalAmount += $amount;
             $customsLines[] = [
-                'description' => substr($row['product_name'], 0, 35),
+                'description' => mb_strcut($row['product_name'], 0, 35),
                 'harmonizedSystemCode' => $hsCode,
                 'originCountry' => $originCountry,
                 'quantity' => (int) $row['product_quantity'],
