@@ -28,5 +28,14 @@ class Connection
             'pluginVersion' => Version::plugin(),
         ]));
         $this->client = $clientBuilder->buildAuthenticatedByPassword($username, $password);
+
+        $this->client->getAuthentication()->setJwtToken(
+            Configuration::get('dpdconnect_jwt_token') ?: null
+        );
+
+        $this->client->getAuthentication()->setTokenUpdateCallback(function ($jwtToken) {
+            Configuration::updateValue('dpdconnect_jwt_token', $jwtToken);
+            $this->client->getAuthentication()->setJwtToken($jwtToken);
+        });
     }
 }

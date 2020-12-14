@@ -97,7 +97,14 @@
                             }
                         }
                     });
-                })
+                });
+
+                jQuery('#dpd-connect\\\\classes\\\\dpd-checkout-delivery-step .continue').on('click', function(e) {
+                    if (jQuery('.delivery-options input:checked').val() == parcelshopId + ',' && !jQuery('#parcel-id').val()) {
+                        e.preventDefault();
+                        jQuery('.dpd-alert').show();
+                    }
+                });
             })
         }
     });
@@ -124,6 +131,12 @@
                 '<hr>' + openingshours +
                 '<strong class="modal-link"><a id="' + shop.parcelShopId + '" class="ParcelShops">Ship to this parcel</a></strong>' +
                 '</div>');
+
+            jQuery('#parcelshops')[0].addEventListener('click', function(e) {
+                if (e.target.matches('.gm-style-iw button')) {
+                    e.stopPropagation();
+                }
+            });
 
             jQuery('#parcelshops').on('click', '.go-back', function () {
                 jQuery('#googlemap_shops').show();
