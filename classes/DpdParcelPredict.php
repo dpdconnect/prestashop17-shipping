@@ -57,6 +57,16 @@ class DpdParcelPredict
             'pluginVersion' => Version::plugin(),
         ]));
         $this->dpdClient = $clientBuilder->buildAuthenticatedByPassword($username, $password);
+
+        $this->dpdClient->getAuthentication()->setJwtToken(
+            Configuration::get('dpdconnect_jwt_token') ?: null
+        );
+
+        $this->dpdClient->getAuthentication()->setTokenUpdateCallback(function ($jwtToken) {
+            Configuration::updateValue('dpdconnect_jwt_token', $jwtToken);
+            $this->dpdClient->getAuthentication()->setJwtToken($jwtToken);
+        });
+
         $this->Gmaps = new Gmaps();
     }
 
