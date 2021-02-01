@@ -50,14 +50,14 @@ class dpdconnect extends Module
         'AdminDpdProductAttributesController' => 'DPD Product Attributes',
     ];
     private $hooks = [
-        'displayAdminOrderTabOrder',
-        'displayAdminOrderContentOrder',
+        'displayAdminOrderTabLink',
+        'displayAdminOrderTabContent',
         'actionAdminBulkAffectZoneAfter',
         'actionCarrierProcess',
         'displayOrderConfirmation',
         'displayBeforeCarrier',
         'actionValidateOrder',
-        'actionAdminOrdersListingFieldsModifier',
+//        'actionAdminOrdersListingFieldsModifier', DEPRECATED SINCE PRESTASHOP 1.6
         'displayBackOfficeHeader',
     ];
 
@@ -466,7 +466,7 @@ class dpdconnect extends Module
         return $output . $this->dpdHelper->displayConfigurationForm($this, $formAccountSettings, $formAdres, $productSettings, $advancedSettings, $submit);
     }
 
-    public function hookDisplayAdminOrderTabOrder($params)
+    public function hookDisplayAdminOrderTabLink($params)
     {
         $orderId = Tools::getValue('id_order');
         $parcelShopId = $this->dpdParcelPredict->getParcelShopId($orderId);
@@ -480,7 +480,7 @@ class dpdconnect extends Module
         }
     }
 
-    public function hookDisplayAdminOrderContentOrder($params)
+    public function hookDisplayAdminOrderTabContent($params)
     {
         $orderId = Tools::getValue('id_order');
         $parcelShopId = $this->dpdParcelPredict->getParcelShopId($orderId);
@@ -543,119 +543,120 @@ class dpdconnect extends Module
         }
     }
 
-    public function hookActionAdminOrdersListingFieldsModifier($list)
-    {
-        $optionsOrderStatus = [1 => 'Select'];
-
-        if (isset($list['select'])) {
-            $list['select'] .= ', label.order_id AS dpd_label';
-            $list['join'] .= sprintf(
-                ' LEFT JOIN %sdpdshipment_label AS label
-                         ON label.order_id = a.id_order
-                          AND label.retour = "0"
-                ',
-                _DB_PREFIX_
-            );
-
-            $list['select'] .= ', CONCAT_WS(",", latest_job.order_id, latest_job.status) AS dpd_job';
-            $list['join'] .= sprintf(
-                '
-                    LEFT JOIN (SELECT max(id_dpd_jobs) AS max_id,
-                                      order_id,
-                                      status,
-                                      type
-                                 FROM %sdpd_jobs
-                                WHERE type = "%s"
-                             GROUP BY order_id) AS latest_job
-                           ON (latest_job.order_id = a.id_order)
-                ',
-                _DB_PREFIX_,
-                ParcelType::TYPEREGULAR
-            );
-
-            $list['select'] .= ', return_label.order_id AS dpd_return_label';
-            $list['join'] .= sprintf(
-                '
-                    LEFT JOIN %sdpdshipment_label AS return_label
-                           ON return_label.order_id = a.id_order
-                          AND return_label.retour = "1"
-                ',
-                _DB_PREFIX_
-            );
-
-            $list['select'] .= ', CONCAT_WS(",", latest_return_job.order_id, latest_return_job.status) AS dpd_return_job';
-            $list['join'] .= sprintf(
-                '
-                    LEFT JOIN (SELECT max(id_dpd_jobs) AS max_id,
-                                      order_id,
-                                      status,
-                                      type
-                                 FROM %sdpd_jobs
-                                WHERE type = "%s"
-                             GROUP BY order_id) AS latest_return_job
-                           ON (latest_return_job.order_id = a.id_order)
-                ',
-                _DB_PREFIX_,
-                ParcelType::TYPERETURN
-            );
-        }
-
-        /**
-         * DPD label
-         */
-        $list['fields']['dpd_label'] = [
-            'title' => 'DPD Label',
-            'align' => 'text-center',
-            'filter_key' => 'label!order_id',
-            'callback' => 'renderPdfColumn',
-            'orderby' => false,
-            'type' => 'select',
-            'list' => $optionsOrderStatus,
-            'callback_object' => Module::getInstanceByName($this->name)
-        ];
-
-        /**
-         * DPD latest job
-         */
-        $list['fields']['dpd_job'] = [
-            'title' => 'DPD Job',
-            'align' => 'text-center',
-            'filter_key' => 'a!id_order',
-            'callback' => 'renderJobColumn',
-            'orderby' => false,
-            'type' => 'select',
-            'list' => $optionsOrderStatus,
-            'callback_object' => Module::getInstanceByName($this->name)
-        ];
-
-        /**
-         * DPD return label
-         */
-        $list['fields']['dpd_return_label'] = [
-            'title' => 'DPD return Label',
-            'align' => 'text-center',
-            'filter_key' => 'label!order_id',
-            'callback' => 'renderPdfReturnColumn',
-            'orderby' => false,
-            'type' => 'select',
-            'list' => $optionsOrderStatus,
-            'callback_object' => Module::getInstanceByName($this->name)
-        ];
-
-        /**
-         * DPD latest return job
-         */
-        $list['fields']['dpd_return_job'] = [
-            'title' => 'DPD return Job',
-            'align' => 'text-center',
-            'filter_key' => 'a!id_order',
-            'callback' => 'renderJobColumn',
-            'orderby' => false,
-            'type' => 'select',
-            'list' => $optionsOrderStatus,
-            'callback_object' => Module::getInstanceByName($this->name)
-        ];
-    }
+    // DEPRECATED SINCE PRESTASHOP 1.6
+//    public function hookActionAdminOrdersListingFieldsModifier($list)
+//    {
+//        $optionsOrderStatus = [1 => 'Select'];
+//
+//        if (isset($list['select'])) {
+//            $list['select'] .= ', label.order_id AS dpd_label';
+//            $list['join'] .= sprintf(
+//                ' LEFT JOIN %sdpdshipment_label AS label
+//                         ON label.order_id = a.id_order
+//                          AND label.retour = "0"
+//                ',
+//                _DB_PREFIX_
+//            );
+//
+//            $list['select'] .= ', CONCAT_WS(",", latest_job.order_id, latest_job.status) AS dpd_job';
+//            $list['join'] .= sprintf(
+//                '
+//                    LEFT JOIN (SELECT max(id_dpd_jobs) AS max_id,
+//                                      order_id,
+//                                      status,
+//                                      type
+//                                 FROM %sdpd_jobs
+//                                WHERE type = "%s"
+//                             GROUP BY order_id) AS latest_job
+//                           ON (latest_job.order_id = a.id_order)
+//                ',
+//                _DB_PREFIX_,
+//                ParcelType::TYPEREGULAR
+//            );
+//
+//            $list['select'] .= ', return_label.order_id AS dpd_return_label';
+//            $list['join'] .= sprintf(
+//                '
+//                    LEFT JOIN %sdpdshipment_label AS return_label
+//                           ON return_label.order_id = a.id_order
+//                          AND return_label.retour = "1"
+//                ',
+//                _DB_PREFIX_
+//            );
+//
+//            $list['select'] .= ', CONCAT_WS(",", latest_return_job.order_id, latest_return_job.status) AS dpd_return_job';
+//            $list['join'] .= sprintf(
+//                '
+//                    LEFT JOIN (SELECT max(id_dpd_jobs) AS max_id,
+//                                      order_id,
+//                                      status,
+//                                      type
+//                                 FROM %sdpd_jobs
+//                                WHERE type = "%s"
+//                             GROUP BY order_id) AS latest_return_job
+//                           ON (latest_return_job.order_id = a.id_order)
+//                ',
+//                _DB_PREFIX_,
+//                ParcelType::TYPERETURN
+//            );
+//        }
+//
+//        /**
+//         * DPD label
+//         */
+//        $list['fields']['dpd_label'] = [
+//            'title' => 'DPD Label',
+//            'align' => 'text-center',
+//            'filter_key' => 'label!order_id',
+//            'callback' => 'renderPdfColumn',
+//            'orderby' => false,
+//            'type' => 'select',
+//            'list' => $optionsOrderStatus,
+//            'callback_object' => Module::getInstanceByName($this->name)
+//        ];
+//
+//        /**
+//         * DPD latest job
+//         */
+//        $list['fields']['dpd_job'] = [
+//            'title' => 'DPD Job',
+//            'align' => 'text-center',
+//            'filter_key' => 'a!id_order',
+//            'callback' => 'renderJobColumn',
+//            'orderby' => false,
+//            'type' => 'select',
+//            'list' => $optionsOrderStatus,
+//            'callback_object' => Module::getInstanceByName($this->name)
+//        ];
+//
+//        /**
+//         * DPD return label
+//         */
+//        $list['fields']['dpd_return_label'] = [
+//            'title' => 'DPD return Label',
+//            'align' => 'text-center',
+//            'filter_key' => 'label!order_id',
+//            'callback' => 'renderPdfReturnColumn',
+//            'orderby' => false,
+//            'type' => 'select',
+//            'list' => $optionsOrderStatus,
+//            'callback_object' => Module::getInstanceByName($this->name)
+//        ];
+//
+//        /**
+//         * DPD latest return job
+//         */
+//        $list['fields']['dpd_return_job'] = [
+//            'title' => 'DPD return Job',
+//            'align' => 'text-center',
+//            'filter_key' => 'a!id_order',
+//            'callback' => 'renderJobColumn',
+//            'orderby' => false,
+//            'type' => 'select',
+//            'list' => $optionsOrderStatus,
+//            'callback_object' => Module::getInstanceByName($this->name)
+//        ];
+//    }
 
     public function renderJobColumn($jobData)
     {
