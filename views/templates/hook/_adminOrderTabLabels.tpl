@@ -16,65 +16,102 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *}
-<div class="dpd tab-pane" id="labels">
-    <div class="clear"></div>
-        <div class="row label">
-            {if !$isInDb}
-            <a href="{{$urlGenerateLabel}}" id="generate-label" style="float: right" target="_blank" >
-                <button class="btn btn-default" style="float: right" id="generateLabelButton"><i class="icon-print"> </i> {l s='Print DPD label' d='Modules.dpd_carrier'}</button>
-            </a>
-                <label for="parcel" style="color: black; margin-top: -20px; float: left; margin-left: 7px;"> {l s='Number of parcels' d='Modules.dpd_carrier'} </label>
-                <div class=" col-lg-4 col-md-3 col-xs-6">
-                    <div class="input-group">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" id='min-label'type="button">-</button>
-                        </span>
-                        <input type="number" class="form-control" id="parcel" value="1">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" id="plus-label" type="button">+</button>
-                        </span>
-                </div>
-            </div>
-            {else}
-            <a href="{{$urlGenerateLabel}}" id="generate-label" target="_blank" >
-                <button class="btn btn-default" style="float: right" id="showLabel"><i class="icon-download"> </i> {l s='Download DPD label' d='Modules.dpdconnect'}</button>
-            </a>
-
-
-            <a href="{{$deleteGeneratedLabel}}" id="deletefromdatabase" >
-                <button class="btn btn-danger" style="float: left" id="deleteLabelfromDatabase"><i class="icon-eraser"> </i> {l s='Delete  DPD label' d='Modules.dpdconnect'}</button>
-            </a>
-
-            {/if}
+<div class="tab-pane d-print-block fade" id="orderDpdTabContent" role="tabpanel" aria-labelledby="orderDpdTab">
+    <div class="card card-details">
+        <div class="card-header d-none d-print-block">
+            {* This never gets displayed anyways *}
         </div>
-        <div class="row" style="margin-top: 10px;">
-            {if !$isReturnInDb}
-                <a href="{{$urlGenerateReturnLabel}}" style="float: right" id="generate-label-retour" target="_blank">
-                    <button class="btn btn-default"><i class="icon-rotate-right"></i> {l s='Print Retour Label' d='Modules.dpdconnect'}</button>
-                </a>
-                <label for="parcel" style="color: black; margin-top: -23px; float: left; margin-left: 7px;"> {l s='Number of parcels' d='Modules.dpd_carrier'} </label>
-                <div class=" col-lg-4 col-md-3 col-xs-6">
-                    <div class="input-group">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" id='min-label-retour'type="button">-</button>
-                        </span>
-                        <input type="number" class="form-control" id="parcel-retour" value="1">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" id="plus-label-retour" type="button">+</button>
-                        </span>
+        <div class="card-body">
+            <div class="form-group row">
+                {if !$isInDb}
+                    <div class="col-sm">
+                        <div class="text-right" >
+                            <a href="{{$urlGenerateLabel}}" id="generate-label" style="float: right" target="_blank" >
+                                <br><br>
+                                <button class="btn btn-default" style="float: left; display: block;" id="generateLabelButton">
+                                    <i class="material-icons">print</i>
+                                    {l s='Print DPD label' d='Modules.dpd_carrier'}
+                                </button>
+                            </a>
+                        </div>
+                        <div class="form-control-label text-left" style="float: left;">
+                            <label for="parcel" style="color: black;"> {l s='Number of parcels' d='Modules.dpd_carrier'} </label>
+                        </div>
+                        <br><br>
+                        <div class="input-group col-sm-4" style="padding-left: 0; margin-left: 0; margin-top: -5px;">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" id='min-label' type="button">-</button>
+                            </span>
+                            <input type="number" class="form-control" id="parcel" value="1">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" id="plus-label" type="button">+</button>
+                            </span>
+                        </div>
                     </div>
-                </div>
-            {else}
-                <a href="{{$urlGenerateReturnLabel}}" style="float: right" target="_blank">
-                    <button class="btn btn-default"><i class="icon-rotate-right"></i> {l s='Download Retour Label' d='Modules.dpdconnect'}</button>
-                </a>
+                {else}
+                    <div style="margin-left: 15px;">
+                        <a href="{{$urlGenerateLabel}}" id="generate-label" target="_blank" >
+                            <button class="btn btn-default" style="float: left" id="showLabel">
+                                <i class="material-icons">cloud_download</i>
+                                {l s='Download DPD label' d='Modules.dpdconnect'}
+                            </button>
+                        </a>
+                        <a href="{{$deleteGeneratedLabel}}" id="deletefromdatabase" >
+                            <button class="btn btn-danger" style="float: right" id="deleteLabelfromDatabase">
+                                <i class="material-icons">delete_forever</i>
+                                {l s='Delete  DPD label' d='Modules.dpdconnect'}
+                            </button>
+                        </a>
+                    </div>
+                {/if}
+            </div>
+            <div class="form-group row" style="margin-top: 10px;">
+                {if !$isReturnInDb}
+                    <div class="col-sm">
+                        <div class="text-right">
+                            <a href="{{$urlGenerateReturnLabel}}" style="float: right" id="generate-label-retour" target="_blank">
+                                <br><br>
+                                <button class="btn btn-default">
+                                    <i class="material-icons">rotate_left</i>
+                                    {l s='Print Retour Label' d='Modules.dpdconnect'}
+                                </button>
+                            </a>
+                        </div>
+                        <div class="form-control-label text-left" style="float: left;">
+                            <label for="parcel" style="color: black; float: left;"> {l s='Number of parcels' d='Modules.dpd_carrier'} </label>
+                        </div>
+                        <br><br>
+                        <div class="input-group col-sm-4" style="padding-left: 0; margin-left: 0; margin-top: -5px;">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" id='min-label-retour' type="button">-</button>
+                            </span>
+                            <input type="number" class="form-control" id="parcel-retour" value="1">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" id="plus-label-retour" type="button">+</button>
+                            </span>
+                        </div>
+                    </div>
+                {else}
+                    <div style="margin: 15px;">
+                        <a href="{{$urlGenerateReturnLabel}}" style="float: left" target="_blank">
+                            <button class="btn btn-default">
+                                <i class="material-icons">cloud_download</i>
+                                {l s='Download Retour Label' d='Modules.dpdconnect'}
+                            </button>
+                        </a>
 
-                <a href="{{$deleteGeneratedRetourLabel}}" id="deletefromdatabase" >
-                    <button class="btn btn-danger" style="float: left" id="deleteLabelfromDatabase"><i class="icon-eraser"> </i> {l s='Delete  DPD label' d='Modules.dpdconnect'}</button>
-                </a>
-            {/if}
+                        <a href="{{$deleteGeneratedRetourLabel}}" id="deletefromdatabase">
+                            <button class="btn btn-danger" style="float: right" id="deleteLabelfromDatabase">
+                                <i class="material-icons">delete_forever</i>
+                                {l s='Delete  DPD label' d='Modules.dpdconnect'}
+                            </button>
+                        </a>
+                    </div>
+                {/if}
+            </div>
+            <div class="clearfix"></div>
         </div>
-    <div class="clearfix"></div>
+    </div>
 </div>
 
 {literal}
