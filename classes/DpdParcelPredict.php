@@ -41,6 +41,7 @@ class DpdParcelPredict
     public $dpdClient;
     public $Gmaps;
     public $DpdAuthentication;
+    private $dpdCarrier;
 
     public function __construct()
     {
@@ -68,6 +69,9 @@ class DpdParcelPredict
         });
 
         $this->Gmaps = new Gmaps();
+
+        $dpdCarrier       = new DpdCarrier();
+        $this->dpdCarrier = $dpdCarrier;
     }
 
     public function getGeoData($postalCode, $isoCode)
@@ -90,6 +94,36 @@ class DpdParcelPredict
             \PrestaShopLoggerCore::addLog($exception->getMessage(), 3, null, 'DPDConnect');
             return false;
         }
+
+        //Make openingHours translateable
+        foreach ($parcelShops as $key => $parcelShop) {
+            foreach($parcelShop['openingHours'] as $openingHourKey => $openingHour) {
+                switch ($openingHour['weekday']) {
+                    case 'maandag':
+                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Monday');
+                        break;
+                    case 'dinsdag':
+                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Tuesday');
+                        break;
+                    case 'woensdag':
+                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Wednesday');
+                        break;
+                    case 'donderdag':
+                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Thursday');
+                        break;
+                    case 'vrijdag':
+                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Friday');
+                        break;
+                    case 'zaterdag':
+                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Saturday');
+                        break;
+                    case 'zondag':
+                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Sunday');
+                        break;
+                }
+            }
+        }
+
         return $parcelShops;
     }
 
