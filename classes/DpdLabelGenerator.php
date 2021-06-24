@@ -596,6 +596,8 @@ class DpdLabelGenerator
             header('Content-Disposition: attachment; filename="dpd-label-' . date("Ymdhis") . '.zip');
 
             echo file_get_contents($zipfile);
+            unlink($zipfile);
+            die;
         }
         unlink($zipfile);
     }

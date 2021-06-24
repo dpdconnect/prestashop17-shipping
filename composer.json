@@ -4,11 +4,12 @@
     "license": "GPL-3.0-or-later",
     "minimum-stability": "dev",
     "require": {
-        "dpdconnect/php-sdk": "^1.0"
+        "dpdconnect/php-sdk": "dev-master"
     },
     "autoload": {
         "psr-4": {
-            "DpdConnect\\classes\\": ["classes"]
+            "DpdConnect\\classes\\": ["classes"],
+            "DpdConnect\\Controller\\Admin\\": "controllers/admin"
         }
     }
 }
