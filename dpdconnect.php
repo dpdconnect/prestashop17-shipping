@@ -34,6 +34,7 @@ use DpdConnect\classes\DpdLabelGenerator;
 use DpdConnect\classes\DpdEncryptionManager;
 use DpdConnect\classes\DpdCheckoutDeliveryStep;
 use DpdConnect\classes\DpdDeliveryOptionsFinder;
+use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
 
 class dpdconnect extends Module
 {
@@ -57,6 +58,7 @@ class dpdconnect extends Module
         'displayOrderConfirmation',
         'displayBeforeCarrier',
         'actionValidateOrder',
+        'actionOrderGridDefinitionModifier',
 //        'actionAdminOrdersListingFieldsModifier', DEPRECATED SINCE PRESTASHOP 1.6
         'displayBackOfficeHeader',
     ];
@@ -464,6 +466,38 @@ class dpdconnect extends Module
         ];
 
         return $output . $this->dpdHelper->displayConfigurationForm($this, $formAccountSettings, $formAdres, $productSettings, $advancedSettings, $submit);
+    }
+
+    // Define Order grid bulk actions
+    public function hookActionOrderGridDefinitionModifier(array $params)
+    {
+        // $params['definition'] is instance of \PrestaShop\PrestaShop\Core\Grid\Definition\GridDefinition
+        $params['definition']->getBulkActions()->add(
+            (new SubmitBulkAction('shipping_list_dpd'))
+                ->setName($this->l('Print DPD Shipping List'))
+                ->setOptions([
+                    // in most cases submit action should be implemented by module
+                    'submit_route' => 'dpdconnect_bulk_actions_shipping_list_dpd',
+                ])
+        );
+
+        $params['definition']->getBulkActions()->add(
+            (new SubmitBulkAction('print_dpd_labels'))
+                ->setName($this->l('Print DPD Labels'))
+                ->setOptions([
+                     // in most cases submit action should be implemented by module
+                     'submit_route' => 'dpdconnect_bulk_actions_print_dpd_labels',
+                 ])
+        );
+
+        $params['definition']->getBulkActions()->add(
+            (new SubmitBulkAction('print_dpd_return_labels'))
+                ->setName($this->l('Print DPD Return Labels'))
+                ->setOptions([
+                     // in most cases submit action should be implemented by module
+                     'submit_route' => 'dpdconnect_bulk_actions_print_dpd_return_labels',
+                 ])
+        );
     }
 
     public function hookDisplayAdminOrderTabLink($params)

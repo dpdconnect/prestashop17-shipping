@@ -67,7 +67,7 @@ class HTMLTemplateDPDShippingList extends HTMLTemplate
 
     public function getLogo()
     {
-        return _PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'logo.png';
+        return '../modules/dpdconnect' . DIRECTORY_SEPARATOR . 'logo.png';
     }
 
     public function getFooter()
