@@ -1,0 +1,23 @@
+dpdconnect_bulk_actions_shipping_list_dpd:
+  path: /dpdconnect/shipping-list-dpd
+  methods: [POST]
+  defaults:
+    _controller: 'DpdConnect\Controller\Admin\AdminDpdBulkActionsController::processBulkShippingListDPD'
+    _legacy_controller: 'AdminDpdBulkActionsController'
+    _legacy_link: 'AdminDpdBulkActionsController'
+
+dpdconnect_bulk_actions_print_dpd_labels:
+  path: /dpdconnect/print-dpd-labels
+  methods: [POST]
+  defaults:
+    _controller: 'DpdConnect\Controller\Admin\AdminDpdBulkActionsController::processPrintDPDLabels'
+    _legacy_controller: 'AdminDpdBulkActionsController'
+    _legacy_link: 'AdminDpdBulkActionsController'
+
+dpdconnect_bulk_actions_print_dpd_return_labels:
+  path: /dpdconnect/print-dpd-return-labels
+  methods: [POST]
+  defaults:
+    _controller: 'DpdConnect\Controller\Admin\AdminDpdBulkActionsController::processPrintDPDReturnLabels'
+    _legacy_controller: 'AdminDpdBulkActionsController'
+    _legacy_link: 'AdminDpdBulkActionsController'
