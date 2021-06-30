@@ -270,7 +270,8 @@ class DpdLabelGenerator
             'product' => [
                 'productCode' => $productCode,
                 'saturdayDelivery' => $saturdayDelivery,
-                'homeDelivery' => $this->dpdParcelPredict->checkIfPredictCarrier($orderId) || $this->dpdParcelPredict->checkIfSaturdayCarrier($orderId)
+                'homeDelivery' => $this->dpdParcelPredict->checkIfPredictCarrier($orderId) || $this->dpdParcelPredict->checkIfSaturdayCarrier($orderId),
+                'ageCheck' => $this->getAgeCheck($tempOrder->getWsOrderRows())
             ],
         ];
 
@@ -633,6 +634,46 @@ class DpdLabelGenerator
 
         // Lastly, use the default HS Code as configured in DPD Connect configurations
         return Configuration::get('dpdconnect_default_product_hcs');
+    }
+
+    private function getAgeCheck($orderRows)
+    {
+        foreach( $orderRows as $orderRow) {
+            $productId = $orderRow['product_id'];
+            $product = new Product($productId);
+
+            $cooFeatureId = Configuration::get('dpdconnect_age_check');
+            if ($cooFeatureId) {
+                $productFeatures = $product->getFeatures();
+                $productCooFeature = array_filter($productFeatures, function ($feature) use ($cooFeatureId) {
+                    return $feature['id_feature'] === $cooFeatureId;
+                });
+
+                $ageCheck = new FeatureValue(current($productCooFeature)['id_feature_value']);
+                if ($ageCheck->value) {
+                    // Feature may contain multiple languages. Just picking the first one.
+                    return true;
+                }
+            }
+
+            $default = Configuration::get('dpdconnect_age_check_attribute');
+            if ($default) {
+                return $default;
+            }
+
+            // Next check if a custom mapping is set
+            $sql = new DbQuery();
+            $sql->from('dpd_product_attributes');
+            $sql->select('age_check');
+            $sql->where('product_id = ' . $product->id);
+            $result = Db::getInstance()->getValue($sql);
+
+            if ($result) {
+                return $result;
+            }
+        }
+
+        return false;
     }
 
     private function getCountryOfOrigin($product)

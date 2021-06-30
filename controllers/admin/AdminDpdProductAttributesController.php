@@ -47,6 +47,10 @@ class AdminDpdProductAttributesController extends ModuleAdminController
                 'title' => $this->l('Country of Origin'),
                 'width' => 'auto',
             ],
+            'age_check' => [
+                'title' => $this->l('Age Check'),
+                'width' => 'auto',
+            ],
         ];
 
         $lists = parent::renderList();
@@ -98,6 +102,14 @@ class AdminDpdProductAttributesController extends ModuleAdminController
                             'disabled' => false,
                             'size' => 2,
                         ],
+                        [
+                            'type' => 'text',
+                            'label' => $this->l('Age check:'),
+                            'name' => 'age_check',
+                            'readonly' => false,
+                            'disabled' => false,
+                            'size' => 2,
+                        ],
                     ],
                     'submit' => [
                         'title' => $this->l('Save'),
@@ -129,18 +141,21 @@ class AdminDpdProductAttributesController extends ModuleAdminController
             $sql->select('hs_code');
             $sql->select('customs_value');
             $sql->select('country_of_origin');
+            $sql->select('age_check');
             $sql->where('id_dpd_product_attributes = ' . $id);
             $results = Db::getInstance()->executeS($sql)[0];
             $productId = $results['product_id'];
             $hsCode = $results['hs_code'];
             $customsValue = $results['customs_value'];
             $countryOfOrigin = $results['country_of_origin'];
+            $ageCheck = $results['age_check'];
 
             $helper->submit_action = 'edit' . $this->table;
             $helper->fields_value['product_id'] = $productId;
             $helper->fields_value['hs_code'] = $hsCode;
             $helper->fields_value['customs_value'] = $customsValue;
             $helper->fields_value['country_of_origin'] = $countryOfOrigin;
+            $helper->fields_value['age_check'] = $ageCheck;
         }
 
         return $helper->generateForm($this->fields_form);
@@ -184,10 +199,12 @@ class AdminDpdProductAttributesController extends ModuleAdminController
         $hsCode = Tools::getValue('hs_code');
         $customsValue = Tools::getValue('customs_value');
         $countryOfOrigin = Tools::getValue('country_of_origin');
+        $ageCheck = Tools::getValue('age_check');
         $sql = 'UPDATE ' ._DB_PREFIX_ . 'dpd_product_attributes 
                    SET hs_code =' . $hsCode . ', 
                        customs_value = ' . $customsValue . ',
                        country_of_origin = "' . $countryOfOrigin . '"
+                       age_check = "' . $ageCheck . '"
                  WHERE id_dpd_product_attributes = ' . $id;
         try {
             DB::getInstance()->execute($sql);
@@ -204,12 +221,14 @@ class AdminDpdProductAttributesController extends ModuleAdminController
         $hsCode = Tools::getValue('hs_code');
         $customsValue = Tools::getValue('customs_value');
         $countryOfOrigin = Tools::getValue('country_of_origin');
+        $ageCheck = Tools::getValue('age_check');
         try {
             $result = Db::getInstance()->insert('dpd_product_attributes', [
                 'product_id' => $productId,
                 'hs_code' => $hsCode,
                 'customs_value' => $customsValue,
                 'country_of_origin' => $countryOfOrigin,
+                'age_check' => $ageCheck
             ]);
             if ($result === false) {
                 $this->errors[] = Tools::displayError('Creating HS Code failed. Probably HS Code already exists for Product ID ' . $productId);

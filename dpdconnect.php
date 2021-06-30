@@ -198,6 +198,7 @@ class dpdconnect extends Module
             $defaultProductWeight = Tools::getValue('default_product_weight');
             $defaultProductCountryOfOrigin = Tools::getValue('default_product_country_of_origin');
             $countryOfOriginFeature = Tools::getValue('country_of_origin_feature');
+            $ageCheckAttribute = Tools::getValue('age_check_attribute');
             $customsValueFeature = Tools::getValue('customs_value_feature');
             $hsCodeFeature = Tools::getValue('hs_code_feature');
             $connecturl = strval(Tools::getValue("dpdconnect_url"));
@@ -233,7 +234,8 @@ class dpdconnect extends Module
                 Configuration::updateValue('dpdconnect_default_product_hcs', $defaultProductHcs);
                 Configuration::updateValue('dpdconnect_default_product_weight', $defaultProductWeight);
                 Configuration::updateValue('dpdconnect_default_product_country_of_origin', $defaultProductCountryOfOrigin);
-                Configuration::updateValue('dpdconnect_country_of_origin_feature', $countryOfOriginFeature);
+                Configuration::updateValue('dpdconnect_default_product_country_of_origin', $defaultProductCountryOfOrigin);
+                Configuration::updateValue('dpdconnect_age_check_attribute', $ageCheckAttribute);
                 Configuration::updateValue('dpdconnect_customs_value_feature', $customsValueFeature);
                 Configuration::updateValue('dpdconnect_hs_code_feature', $hsCodeFeature);
                 Configuration::updateValue('dpdconnect_url', $connecturl);
@@ -413,6 +415,18 @@ class dpdconnect extends Module
                     'label' => $this->l('Harmonized System Code Feature'),
                     'hint' => $this->l('Select the product feature where the Harmonized System Code is defined. If features are not used for harmonized system codes, leave empty.'),
                     'name' => 'hs_code_feature',
+                    'options' => [
+                        'query' => $features,
+                        'id' => 'id_feature',
+                        'name' => 'name',
+                    ],
+                    'required' => false
+                ],
+                [
+                    'type' => 'select',
+                    'label' => $this->l('Age check attribute'),
+                    'hint' => $this->l('Select the attribute used for age check'),
+                    'name' => 'age_check_attribute',
                     'options' => [
                         'query' => $features,
                         'id' => 'id_feature',

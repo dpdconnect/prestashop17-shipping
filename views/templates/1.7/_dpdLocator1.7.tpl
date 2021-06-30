@@ -125,11 +125,11 @@
 
             jQuery('#parcelshops').append('<div class="parcel_modal" id="info_' + shop.parcelShopId + '">' +
                 '<img src="/modules/dpdconnect/img/pickup.png">' +
-                '<a class="go-back"> Terug</a>' +
+                '<a class="go-back">{/literal}{l s="Back" mod="dpdconnect"}{literal}</a>' +
                 '<strong class="modal-title">' + shop.company + '</strong><br>' +
                 shop.street + ' ' + shop.houseNo + '<br>' + shop.zipCode + ' ' + shop.city +
                 '<hr>' + openingshours +
-                '<strong class="modal-link"><a id="' + shop.parcelShopId + '" class="ParcelShops">Ship to this parcel</a></strong>' +
+                '<strong class="modal-link"><a id="' + shop.parcelShopId + '" class="ParcelShops">{/literal}{l s="Ship to this parcelshop" mod="dpdconnect"}{literal}</a></strong>' +
                 '</div>');
 
             jQuery('#parcelshops')[0].addEventListener('click', function(e) {
@@ -143,7 +143,7 @@
                 jQuery('.parcel_modal').hide();
             });
 
-            var sidebar_item = jQuery("<li><div class='sidebar_single'><strong class='company'>" + shop.company + "</strong><br/><span class='address'>" + shop.street + " " + shop.houseNo + "</span><br/><span class='address'>" + shop.zipCode + " " + shop.city + "</span><br/><strong class='modal-link'><a id='more_info_" + shop.parcelShopId + "' class='more-information'>More information.</a></strong></div></li>");
+            var sidebar_item = jQuery("<li><div class='sidebar_single'><strong class='company'>" + shop.company + "</strong><br/><span class='address'>" + shop.street + " " + shop.houseNo + "</span><br/><span class='address'>" + shop.zipCode + " " + shop.city + "</span><br/><strong class='modal-link'><a id='more_info_" + shop.parcelShopId + "' class='more-information'>{/literal}{l s='More information' mod='dpdconnect'}{literal}</a></strong></div></li>");
 
             sidebar_item.on('click', '.more-information', function () {
                 jQuery('#googlemap_shops').hide();
@@ -365,9 +365,9 @@
 
             infowindow.setContent(
                 "<div class='info-modal-content'>" +
-                    content +
-                    "<strong class='modal-link'><a id='"+shop.parcelShopId+"' class='ParcelShops'>{/literal}{l s='Ship to this parcelshop'}{literal}</a></strong> " +
-                    openingshours +
+                content +
+                "<strong class='modal-link'><a id='"+shop.parcelShopId+"' class='ParcelShops'>{/literal}{l s='Ship to this parcelshop' mod='dpdconnect'}{literal}</a></strong> " +
+                openingshours +
                 "</div>"
             );
             window.infowindows.push(infowindow);
@@ -405,8 +405,8 @@
 </script>
 
 <div class="dpd-alert alert alert-danger">
-    <p>{l s='There is 1 error' d='Modules.dpd_carrier'}</p>
+    <p>{l s='There is 1 error' mod='dpdconnect'}</p>
     <ol>
-        <li>{l s='Please select a parcelshop' d='Modules.dpd_carrier'}</li>
+        <li>{l s='Please select a parcelshop' mod='dpdconnect'}</li>
     </ol>
 </div>
