@@ -66,7 +66,6 @@ class DpdHelper
         $helperForm->fields_value['dpdconnect_password'] = Configuration::get('dpdconnect_password');
         $helperForm->fields_value['dpdconnect_depot'] = Configuration::get('dpdconnect_depot');
         $helperForm->fields_value['company'] = Configuration::get('dpdconnect_company');
-        $helperForm->fields_value['account_type'] = Configuration::get('dpdconnect_account_type');
         $helperForm->fields_value['street'] = Configuration::get('dpdconnect_street');
         $helperForm->fields_value['postalcode'] = Configuration::get('dpdconnect_postalcode');
         $helperForm->fields_value['place'] = Configuration::get('dpdconnect_place');
@@ -75,14 +74,15 @@ class DpdHelper
         $helperForm->fields_value['vatnumber'] = Configuration::get('dpdconnect_vatnumber');
         $helperForm->fields_value['eorinumber'] = Configuration::get('dpdconnect_eorinumber');
         $helperForm->fields_value['spr'] = Configuration::get('dpdconnect_spr');
-        $helperForm->fields_value['gmaps_client_key'] =  Configuration::get('gmaps_client_key');
-        $helperForm->fields_value['gmaps_server_key'] =  Configuration::get('gmaps_server_key');
+        $helperForm->fields_value['maps_key'] =  Configuration::get('dpdconnect_maps_key');
+        $helperForm->fields_value['use_dpd_key'] =  Configuration::get('dpdconnect_use_dpd_key');
         $helperForm->fields_value['default_product_hcs'] =  Configuration::get('dpdconnect_default_product_hcs');
         $helperForm->fields_value['default_product_weight'] =  Configuration::get('dpdconnect_default_product_weight');
         $helperForm->fields_value['default_product_country_of_origin'] =  Configuration::get('dpdconnect_default_product_country_of_origin');
         $helperForm->fields_value['country_of_origin_feature'] =  Configuration::get('dpdconnect_country_of_origin_feature');
         $helperForm->fields_value['customs_value_feature'] =  Configuration::get('dpdconnect_customs_value_feature');
         $helperForm->fields_value['hs_code_feature'] =  Configuration::get('dpdconnect_hs_code_feature');
+        $helperForm->fields_value['age_check_attribute'] =  Configuration::get('dpdconnect_age_check_attribute');
         $helperForm->fields_value['dpdconnect_url'] = Configuration::get('dpdconnect_url');
         $helperForm->fields_value['callback_url'] =  Configuration::get('dpdconnect_callback_url');
         $helperForm->fields_value['async_treshold'] =  Configuration::get('dpdconnect_async_treshold');
@@ -98,6 +98,60 @@ class DpdHelper
             $query = preg_replace('/_PREFIX_/', _DB_PREFIX_, $query);
 
             return Db::getInstance()->execute($query);
+    }
+
+    public function update()
+    {
+        if (
+            Configuration::get('dpdconnect_v1_3_update') !== '1' &&
+            version_compare(\dpdconnect::VERSION, '1.2', '>')
+        ) {
+            // Mark old dpd carriers as deprecated
+            $deprecatedCarrierIds = [];
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_predict');
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_parcelshop');
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_saturday');
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_classic_saturday');
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_classic');
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_guarantee18');
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_express12');
+            $deprecatedCarrierIds[] = Configuration::get('dpdconnect_express10');
+
+            foreach ($deprecatedCarrierIds as $deprecatedCarrierId) {
+                $deprecatedCarrier = new \Carrier($deprecatedCarrierId);
+
+                if ($deprecatedCarrier->id == 0) {
+                    continue;
+                }
+
+                $deprecatedCarrier->name = '*DEPRECATED*' . $deprecatedCarrier->name . '*DEPRECATED*';
+                $deprecatedCarrier->active = 0;
+                $deprecatedCarrier->deleted = 0;
+                $deprecatedCarrier->delay[Configuration::get('PS_LANG_DEFAULT')] = 'DEPRECATED';
+                $deprecatedCarrier->update();
+            }
+
+            // Retrieve old maps key if it exists
+            $oldMapsKey = '';
+            if (Configuration::get('gmaps_client_key')) {
+                $oldMapsKey = Configuration::get('gmaps_client_key');
+            } elseif (Configuration::get('gmaps_server_key')) {
+                $oldMapsKey = Configuration::get('gmaps_server_key');
+            }
+
+            Configuration::updateValue('dpdconnect_maps_key', $oldMapsKey);
+
+            if ($oldMapsKey) {
+                Configuration::updateValue('dpdconnect_use_dpd_key', 0);
+            } else {
+                Configuration::updateValue('dpdconnect_use_dpd_key', 1);
+            }
+
+            // Finish update
+            Configuration::updateValue('dpdconnect_v1_3_update', '1');
+        }
+
+        return true;
     }
 
     public function installControllers($controllerNames)

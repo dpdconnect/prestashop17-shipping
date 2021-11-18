@@ -1,0 +1,32 @@
+<div class="col-md-12">
+    <div class="form-group">
+    <h2>DPD Fresh & Freeze</h2>
+        <label class="control-label col-lg-3" for="dpd_shipping_product" style="padding-left: 0">DPD Shipping Product</label>
+        <div class="input-group col-lg-2" style="padding-left: 0">
+            <select name="dpd_shipping_product" id="dpd_shipping_product" class="custom-select">
+                <option value="default"
+                    {% if product.dpd_shipping_product == 'default' %} selected="selected" {% endif %}
+                >
+                    Default
+                </option>
+                <option value="fresh"
+                    {% if product.dpd_shipping_product == 'fresh' %} selected="selected" {% endif %}
+                        {% if not isFreshFreezeAllowed %} disabled {% endif %}
+                    >
+                    Fresh
+                </option>
+                <option value="freeze"
+                    {% if product.dpd_shipping_product == 'freeze' %}selected="selected" {% endif %}
+                    {% if not isFreshFreezeAllowed %} disabled {% endif %}
+                    >
+                    Freeze
+                </option>
+            </select>
+        </div>
+
+        <label class="control-label col-lg-3" for="dpd_carrier_description" style="padding-left: 0; margin-top: 20px;">DPD Carrier Description</label>
+        <div class="input-group col-lg-9" style="padding-left: 0; max-width: 500px">
+            <textarea maxlength="30" id="dpd_carrier_description" name="dpd_carrier_description" class="form-control" rows="1">{{ product.dpd_carrier_description }}</textarea>
+        </div>
+    </div>
+</div>

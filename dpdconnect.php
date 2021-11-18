@@ -22,14 +22,12 @@
 
 require_once(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php');
 
-use DpdConnect\classes\JobRepo;
+use DpdConnect\classes\DpdProductHelper;
 use DpdConnect\classes\DpdHelper;
 use DpdConnect\classes\DpdCarrier;
 use DpdConnect\classes\enums\JobStatus;
-use DpdConnect\classes\enums\ParcelType;
 use DpdConnect\classes\DpdShippingList;
 use DpdConnect\classes\DpdParcelPredict;
-use DpdConnect\classes\DpdAuthentication;
 use DpdConnect\classes\DpdLabelGenerator;
 use DpdConnect\classes\DpdEncryptionManager;
 use DpdConnect\classes\DpdCheckoutDeliveryStep;
@@ -38,11 +36,13 @@ use PrestaShop\PrestaShop\Core\Grid\Action\Bulk\Type\SubmitBulkAction;
 
 class dpdconnect extends Module
 {
-    const VERSION = '1.2';
+    const VERSION = '1.3';
 
+    public $twig;
     public $dpdHelper;
     public $dpdCarrier;
     public $dpdParcelPredict;
+    public $dpdProductHelper;
 
     private $ownControllers = [
         'AdminDpdLabels' => 'DPD label',
@@ -59,16 +59,21 @@ class dpdconnect extends Module
         'displayBeforeCarrier',
         'actionValidateOrder',
         'actionOrderGridDefinitionModifier',
-//        'actionAdminOrdersListingFieldsModifier', DEPRECATED SINCE PRESTASHOP 1.6
         'displayBackOfficeHeader',
+        'actionDispatcher', // Hook for updating DPD Carriers
+        'displayAdminProductsShippingStepBottom',
     ];
 
 
     public function __construct()
     {
+        $this->twig = new \Twig_Environment(new \Twig_Loader_Filesystem([
+            _PS_ROOT_DIR_ . '/modules/dpdconnect/views'
+        ]));
         $this->dpdHelper = new DpdHelper();
         $this->dpdCarrier = new DpdCarrier();
         $this->dpdParcelPredict = new DpdParcelPredict();
+        $this->dpdProductHelper = new DpdProductHelper();
 
         // the information about the plugin.
         $this->version = self::VERSION;
@@ -141,6 +146,10 @@ class dpdconnect extends Module
             //TODO create a log that hook could not be installed.
             return false;
         }
+        if (!$this->dpdHelper->update()) {
+            //TODO create a log that the updates could not be executed
+            return false;
+        }
         if (!$this->dpdCarrier->createCarriers()) {
             //TODO create a log that the carrier could not be installed
             return false;
@@ -191,9 +200,8 @@ class dpdconnect extends Module
             $vatnumber = strval(Tools::getValue("vatnumber"));
             $eorinumber = strval(Tools::getValue("eorinumber"));
             $spr = strval(Tools::getValue("spr"));
-            $accountType = Tools::getValue('account_type');
-            $gmapsClientKey = Tools::getValue('gmaps_client_key');
-            $gmapsServerKey = Tools::getValue('gmaps_server_key');
+            $mapsKey = Tools::getValue('maps_key');
+            $useDpdKey = Tools::getValue('use_dpd_key');
             $defaultProductHcs = Tools::getValue('default_product_hcs');
             $defaultProductWeight = Tools::getValue('default_product_weight');
             $defaultProductCountryOfOrigin = Tools::getValue('default_product_country_of_origin');
@@ -211,17 +219,15 @@ class dpdconnect extends Module
                empty($postalcode) ||
                empty($place) ||
                empty($country) ||
-               empty($email) ||
-               empty($accountType)
+               empty($email)
             )) {
-                Configuration::updateValue('gmaps_client_key', $gmapsClientKey);
-                Configuration::updateValue('gmaps_server_key', $gmapsServerKey);
+                Configuration::updateValue('dpdconnect_maps_key', $mapsKey);
+                Configuration::updateValue('dpdconnect_use_dpd_key', $useDpdKey);
                 Configuration::updateValue('dpdconnect_username', $connectusername);
                 if ($connectpassword) {
                     Configuration::updateValue('dpdconnect_password', $connectpassword);
                 }
                 Configuration::updateValue('dpdconnect_depot', $depot);
-                Configuration::updateValue('dpdconnect_account_type', $accountType);
                 Configuration::updateValue('dpdconnect_company', $company);
                 Configuration::updateValue('dpdconnect_street', $street);
                 Configuration::updateValue('dpdconnect_postalcode', $postalcode);
@@ -242,8 +248,6 @@ class dpdconnect extends Module
                 Configuration::updateValue('dpdconnect_callback_url', $callbackUrl);
                 Configuration::updateValue('dpdconnect_async_treshold', $asyncTreshold);
                 $output .= $this->displayConfirmation($this->l('Settings updated'));
-
-                $this->dpdCarrier->setCarrierForAccountType();
             } else {
                 $output .= $this->displayError($this->l('Invalid Configuration value'));
             }
@@ -273,31 +277,32 @@ class dpdconnect extends Module
                     'required' => true
                 ],
                 [
+                    'type' => 'text',
+                    'label' => $this->l('Google Maps API key'),
+                    'name' => 'maps_key',
+                    'required' => false
+                ],
+                [
+                    'type' => 'radio',
+                    'label' => $this->l("Use DPD's Google Maps API Key"),
+                    'desc' => $this->l('These may be subject to rate limiting, high volume users should use their own Google keys.'),
+                    'name' => 'use_dpd_key',
                     'required' => true,
-                    'type' => 'select',
-                    'label' => $this->l('DPD Account type'),
-                    'name' => 'account_type',
-                    'options' => [
-                        'query' => [
-                            ['key' => '0', 'name' => $this->l('Please select DPD Account type')],
-                            ['key' => 'b2b', 'name' => $this->l('B2B')],
-                            ['key' => 'b2c', 'name' => $this->l('B2C')],
-                        ],
-                        'id' => 'key',
-                        'name' => 'name'
-                    ]
-                ],
-                [
-                    'type' => 'text',
-                    'label' => $this->l('Google Maps Static & Javascript API key'),
-                    'name' => 'gmaps_client_key',
-                    'required' => true
-                ],
-                [
-                    'type' => 'text',
-                    'label' => $this->l('Google Maps Geocoding API key'),
-                    'name' => 'gmaps_server_key',
-                    'required' => true
+                    'class' => 't',
+                    'is_bool' => true,
+                    'values' => array(
+                        array(
+                            'id'    => 'yes',
+                            'value' => 1,
+                            'label' => $this->l('Yes')
+                        ),
+                        array(
+                            'id'    => 'no',
+                            'value' => 0,
+                            'label' => $this->l('No')
+                        )
+                    ),
+
                 ],
             ],
         ];
@@ -561,16 +566,7 @@ class dpdconnect extends Module
 
     public function hookActionCarrierProcess($params)
     {
-         //this adds parcel-id to the coockie when the carrier is used
-//      if((int)$params['cart']->id_carrier === (int)$this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_parcelshop"))){
-//          if(!empty($_POST['parcel-id']) && !($_POST['parcel-id'] == '')) {
-//              $this->context->cookie->parcelId = $_POST['parcel-id'];
-//            }else{
-//              $this->context->controller->errors[] = $this->l('Please select a parcelshop');
-//            }
-//        }
-
-        if ((int)$params['cart']->id_carrier === (int)$this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_parcelshop"))) {
+        if ((int)$params['cart']->id_carrier === (int)$this->dpdCarrier->getLatestCarrierByReferenceId($this->dpdProductHelper->getDpdParcelshopCarrierId())) {
             if (empty($this->context->cookie->parcelId) || $this->context->cookie->parcelId == '') {
                 $this->context->controller->errors[] = $this->l('Please select a parcelshop');
             }
@@ -580,7 +576,7 @@ class dpdconnect extends Module
     public function hookDisplayOrderConfirmation($params)
     {
         $order = $params['order'];
-        if ((int)$order->id_carrier === (int)$this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_parcelshop"))) {
+        if ((int)$order->id_carrier === (int)$this->dpdCarrier->getLatestCarrierByReferenceId($this->dpdProductHelper->getDpdParcelshopCarrierId())) {
             if (!empty($this->context->cookie->parcelId) && !($this->context->cookie->parcelId == '')) {
                 Db::getInstance()->insert('parcelshop', [
                     'order_id' => pSQL($order->id),
@@ -590,121 +586,6 @@ class dpdconnect extends Module
             }
         }
     }
-
-    // DEPRECATED SINCE PRESTASHOP 1.6
-//    public function hookActionAdminOrdersListingFieldsModifier($list)
-//    {
-//        $optionsOrderStatus = [1 => 'Select'];
-//
-//        if (isset($list['select'])) {
-//            $list['select'] .= ', label.order_id AS dpd_label';
-//            $list['join'] .= sprintf(
-//                ' LEFT JOIN %sdpdshipment_label AS label
-//                         ON label.order_id = a.id_order
-//                          AND label.retour = "0"
-//                ',
-//                _DB_PREFIX_
-//            );
-//
-//            $list['select'] .= ', CONCAT_WS(",", latest_job.order_id, latest_job.status) AS dpd_job';
-//            $list['join'] .= sprintf(
-//                '
-//                    LEFT JOIN (SELECT max(id_dpd_jobs) AS max_id,
-//                                      order_id,
-//                                      status,
-//                                      type
-//                                 FROM %sdpd_jobs
-//                                WHERE type = "%s"
-//                             GROUP BY order_id) AS latest_job
-//                           ON (latest_job.order_id = a.id_order)
-//                ',
-//                _DB_PREFIX_,
-//                ParcelType::TYPEREGULAR
-//            );
-//
-//            $list['select'] .= ', return_label.order_id AS dpd_return_label';
-//            $list['join'] .= sprintf(
-//                '
-//                    LEFT JOIN %sdpdshipment_label AS return_label
-//                           ON return_label.order_id = a.id_order
-//                          AND return_label.retour = "1"
-//                ',
-//                _DB_PREFIX_
-//            );
-//
-//            $list['select'] .= ', CONCAT_WS(",", latest_return_job.order_id, latest_return_job.status) AS dpd_return_job';
-//            $list['join'] .= sprintf(
-//                '
-//                    LEFT JOIN (SELECT max(id_dpd_jobs) AS max_id,
-//                                      order_id,
-//                                      status,
-//                                      type
-//                                 FROM %sdpd_jobs
-//                                WHERE type = "%s"
-//                             GROUP BY order_id) AS latest_return_job
-//                           ON (latest_return_job.order_id = a.id_order)
-//                ',
-//                _DB_PREFIX_,
-//                ParcelType::TYPERETURN
-//            );
-//        }
-//
-//        /**
-//         * DPD label
-//         */
-//        $list['fields']['dpd_label'] = [
-//            'title' => 'DPD Label',
-//            'align' => 'text-center',
-//            'filter_key' => 'label!order_id',
-//            'callback' => 'renderPdfColumn',
-//            'orderby' => false,
-//            'type' => 'select',
-//            'list' => $optionsOrderStatus,
-//            'callback_object' => Module::getInstanceByName($this->name)
-//        ];
-//
-//        /**
-//         * DPD latest job
-//         */
-//        $list['fields']['dpd_job'] = [
-//            'title' => 'DPD Job',
-//            'align' => 'text-center',
-//            'filter_key' => 'a!id_order',
-//            'callback' => 'renderJobColumn',
-//            'orderby' => false,
-//            'type' => 'select',
-//            'list' => $optionsOrderStatus,
-//            'callback_object' => Module::getInstanceByName($this->name)
-//        ];
-//
-//        /**
-//         * DPD return label
-//         */
-//        $list['fields']['dpd_return_label'] = [
-//            'title' => 'DPD return Label',
-//            'align' => 'text-center',
-//            'filter_key' => 'label!order_id',
-//            'callback' => 'renderPdfReturnColumn',
-//            'orderby' => false,
-//            'type' => 'select',
-//            'list' => $optionsOrderStatus,
-//            'callback_object' => Module::getInstanceByName($this->name)
-//        ];
-//
-//        /**
-//         * DPD latest return job
-//         */
-//        $list['fields']['dpd_return_job'] = [
-//            'title' => 'DPD return Job',
-//            'align' => 'text-center',
-//            'filter_key' => 'a!id_order',
-//            'callback' => 'renderJobColumn',
-//            'orderby' => false,
-//            'type' => 'select',
-//            'list' => $optionsOrderStatus,
-//            'callback_object' => Module::getInstanceByName($this->name)
-//        ];
-//    }
 
     public function renderJobColumn($jobData)
     {
@@ -744,6 +625,36 @@ class dpdconnect extends Module
     public function hookDisplayBackOfficeHeader()
     {
         $this->context->controller->addCSS($this->_path . 'views/css/dpd.css', 'all');
+    }
+
+    public function hookActionDispatcher($params)
+    {
+        // Prevent calling updateDPDCarriers() to prevent duplicate carrier entries
+        if (!empty($_POST)) {
+            return;
+        }
+
+        try {
+            $this->dpdProductHelper->updateDPDCarriers();
+        } catch (Exception $exception) {
+            PrestaShopLogger::addLog('Could not update DPD Carriers: ' . $exception->getMessage(), 3);
+        }
+    }
+
+    // Hook for adding custom Fresh and Freeze product fields
+    public function hookDisplayAdminProductsShippingStepBottom($params)
+    {
+        $product = new Product($params['id_product']);
+
+        $connectProduct = new DpdConnect\classes\Connect\Product();
+        $dpdProducts = $connectProduct->getList();
+
+        $isFreshFreezeAllowed = in_array('fresh', array_column($dpdProducts, 'type'));
+
+        return $this->twig->render('templates/admin/fresh_freeze/shipping.html.twig', [
+            'product' => $product,
+            'isFreshFreezeAllowed' => $isFreshFreezeAllowed
+        ]);
     }
 
     public function dpdCarrier()

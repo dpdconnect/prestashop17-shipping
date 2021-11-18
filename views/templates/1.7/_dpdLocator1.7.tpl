@@ -2,94 +2,74 @@
 <input name="parcel-id" type="hidden" id="parcel-id"/>
 {literal}
 <script>
+    const baseUri = "{/literal}{$baseUri}{literal}";
     const parcelshopId = {/literal}{$parcelshopId}{literal};
     const sender = {/literal}{$sender}{literal};
-    var longitude = {/literal}{$longitude|default:'""'}{literal};
-    var latitude = {/literal}{$latitude|default:'""'}{literal};
-    var parcelShops = {/literal}JSON.parse({$parcelshops|@json_encode nofilter}){literal};
-    var cookieParcelId = "{/literal}{$cookieParcelId}{literal}";
-    var baseUri = "{/literal}{$baseUri}{literal}";
+    const shippingAddress = "{/literal}{$shippingAddress}{literal}";
+    const dpdPublicToken = "{/literal}{$dpdPublicToken}{literal}";
+    const shopCountryCode = "{/literal}{$shopCountryCode}{literal}";
+    const mapsKey = "{/literal}{$mapsKey}{literal}";
+    const cookieParcelId = "{/literal}{$cookieParcelId}{literal}";
+    const oneStepParcelshopUrl = "{/literal}{$oneStepParcelshopUrl nofilter}{literal}";
+    const dpdParcelshopMapUrl = "{/literal}{$dpdParcelshopMapUrl}{literal}";
+
+    var mapInitialized = false;
 
     document.addEventListener('DOMContentLoaded', function(){
-        window.markers = [];
-        window.infowindows = [];
+        jQuery(document).on('ready', function () {
+            $.getScript(dpdParcelshopMapUrl, function() {
 
-
-        if(longitude != "" && latitude != "" && parcelShops != "") {
-            if (!(window.isPageLoaded)) {
-                jQuery(document).on('ready', function () {
-                    DpdInitGoogleMaps();
-                    addChosen(cookieParcelId);
-                    jQuery("#parcelshops").hide();
-                    jQuery(".selected-parcelshop").hide();
-                });
-            }
-
-
-            jQuery(document).on('ready', function () {
-                if (jQuery("#parcelshops").length == 0) {
-                    DpdInitGoogleMaps();
-                    jQuery('#parcelshops').hide();
-                    jQuery('.delivery-options input').each(function () {
-                        if (jQuery("#" + this.id).prop("checked")) {
-                            if (this.value === parcelshopId + ',') {
-                                // the the parcelshop sender is selected
-                                jQuery('#parcelshops').show();
-                                addChosen(cookieParcelId);
-                                jQuery('.selected-parcelshop').show();
-
-                            }
-                        }
+                DPDConnect.onParcelshopSelected = function (parcelshop) {
+                    // Store selected parcelshop
+                    jQuery.post(oneStepParcelshopUrl, {
+                        'method': 'setParcelShop',
+                        'parcelId': parcelshop.parcelShopId,
+                        'parcelShopSenderId': parcelshopId,
+                        'sender': sender
                     });
-                }
 
+                    jQuery("#parcel-id").val(parcelshop.parcelShopId);
+                    jQuery(".dpd-alert").hide();
+                    jQuery(".alert-danger").hide();
+                };
 
-                jQuery('.delivery-options input').each(function () {
+                // Loop through every delivery option to see if a DPD Parcelshop carrier is selected
+                jQuery(".delivery-options input").each(function () {
                     if (jQuery("#" + this.id).prop("checked")) {
+
+                        // Check if DPD Parcelshop carrier is selected
                         if (this.value === parcelshopId + ',') {
-                            // the the parcelshop sender is selected
-                            jQuery('#parcelshops').show();
-                            if (cookieParcelId.length !== 0) {
-                                addChosen(cookieParcelId);
+                            if (mapInitialized) {
+                                showContainer();
+                            } else {
+                                initMap();
                             }
                         }
                     }
                 });
 
+                // Hide or show the parcelshop selector when a different delivery option is selected
                 jQuery('.delivery-options input').on('change', function () {
                     if (this.value === parcelshopId + ',') {
-                        jQuery('#parcelshops').show();
-                        jQuery('.selected-parcelshop').show();
+                        if (mapInitialized) {
+                            showContainer();
+                        } else {
+                            initMap();
+                        }
                     } else {
-                        jQuery('#parcelshops').hide();
-                        jQuery('.selected-parcelshop').hide();
+                        hideContainer();
                     }
                 });
 
-                jQuery("#parcelshops").on("click", ".ParcelShops", function (e) {
-                    jQuery('#parcel-id').val(this.id).trigger('change');
-                });
-
-                jQuery("#parcel-id").on('change', function () {
-                    jQuery.ajax({
-                        type: 'POST',
-                        url: '{/literal}{$oneStepParcelshopUrl nofilter}{literal}',
-                        data: 'method=setParcelShop&parcelId=' + jQuery(this).val() + '&parcelShopSenderId=' + parcelshopId + '&sender=' + sender,
-                        dataType: 'json'
-                    });
-                    jQuery(".dpd-alert").hide();
-                    addChosen(jQuery(this).val());
-                    jQuery(".alert-danger").hide();
-                });
-            });
-
-            // for verifying
-            jQuery(document).on('ready', function () {
+                // On one page checkout, prevent continuing when no parcelshop has been selected
                 jQuery('#opc_payment_methods-content').on('click', 'a', function (e) {
                     jQuery('#opc_delivery_methods input.delivery_option_radio').each(function () {
                         if (jQuery("#" + this.id).prop("checked")) {
+
+                            // Check if delivery option is a DPD Parcelshop carrier
                             if (this.value === parcelshopId + ',') {
-                                // the parcel sender
+
+                                // Show alert when no parcelshop has been chosen
                                 if (!jQuery('#parcel-id').val()) {
                                     e.preventDefault();
                                     jQuery('.dpd-alert').show();
@@ -99,310 +79,89 @@
                     });
                 });
 
+                // In normal checkout, prevent continuing when no parcelshop has been selected
                 jQuery('#dpd-connect\\\\classes\\\\dpd-checkout-delivery-step .continue').on('click', function(e) {
                     if (jQuery('.delivery-options input:checked').val() == parcelshopId + ',' && !jQuery('#parcel-id').val()) {
                         e.preventDefault();
                         jQuery('.dpd-alert').show();
                     }
                 });
-            })
-        }
+            });
+        });
     });
 
+    function initMap() {
+        if (mapInitialized) {
+            return;
+        }
 
+        addDivs();
 
-    function DpdInitGoogleMaps() {
-        jQuery('#dpd-connect\\\\classes\\\\dpd-checkout-delivery-step .content .form-fields').append('<div id="parcelshops"></div>');
-        jQuery('#parcelshops').append('<div id="googlemap"></div>');
-        jQuery('#parcelshops').append('<ul id="googlemap_shops"></ul>');
-        parcelShops.map(function (shop) {
-            var content = "<img src='/img/pickup.png'/><strong class='modal-title'>" + shop.company + "</strong><br/>" + shop.street + " " + shop.houseNo + "<br/>" + shop.zipCode + " " + shop.city + "<hr>";
-            var openingshours = "";
+        // If mapsKey is empty that means user chose to use DPD's key
+        if (mapsKey != '') {
+            DPDConnect.show(dpdPublicToken, shippingAddress, shopCountryCode, mapsKey);
+        } else {
+            DPDConnect.show(dpdPublicToken, shippingAddress, shopCountryCode);
+        }
 
-            for (var i = 0; i < shop.openingHours.length; i++) {
-                var openingshours = openingshours + "<div class='modal-week-row'><strong class='modal-day'>" + shop.openingHours[i].weekday + "</strong>" + " " + "<p>" + shop.openingHours[i].openMorning + " - " + shop.openingHours[i].closeMorning + "  " + shop.openingHours[i].openAfternoon + " - " + shop.openingHours[i].closeAfternoon + "</p></div>";
-            }
+        mapInitialized = true;
+    }
 
-            jQuery('#parcelshops').append('<div class="parcel_modal" id="info_' + shop.parcelShopId + '">' +
-                '<img src="/modules/dpdconnect/img/pickup.png">' +
-                '<a class="go-back">{/literal}{l s="Back" mod="dpdconnect"}{literal}</a>' +
-                '<strong class="modal-title">' + shop.company + '</strong><br>' +
-                shop.street + ' ' + shop.houseNo + '<br>' + shop.zipCode + ' ' + shop.city +
-                '<hr>' + openingshours +
-                '<strong class="modal-link"><a id="' + shop.parcelShopId + '" class="ParcelShops">{/literal}{l s="Ship to this parcelshop" mod="dpdconnect"}{literal}</a></strong>' +
+    function addDivs() {
+        if(jQuery('#dpd-connect-container').length == 0 ){
+            jQuery('#dpd-connect\\\\classes\\\\dpd-checkout-delivery-step .content .form-fields').append(
+                '<div id="dpd-connect-container"></div>'
+            );
+        }
+        if(jQuery('#dpd-connect-map-container').length == 0 ){
+            jQuery('#dpd-connect-container').append('<div id="dpd-connect-map-container" style="width: 100%; height: 450px;"></div>');
+        }
+        if(jQuery('#dpd-connect-selected-container').length == 0 ){
+            jQuery('#dpd-connect-container').append('<div id="dpd-connect-selected-container" style="display: none;">' +
+                '{/literal}{l s='Selected parcelshop' mod='dpdconnect'}{literal}:<br />\n' +
+                '<strong>%%company%%</strong><br />\n' +
+                '%%street%% %%houseNo%%<br />\n' +
+                '%%zipCode%% %%city%%<br />\n' +
+                '<br \>' +
+                '<a href="#" id="dpd-connect-change-parcelshop" onclick="onParcelshopChange(event)"><strong>{/literal}{l s='Change' mod='dpdconnect'}{literal}</strong></a>\n' +
                 '</div>');
 
-            jQuery('#parcelshops')[0].addEventListener('click', function(e) {
-                if (e.target.matches('.gm-style-iw button')) {
-                    e.stopPropagation();
-                }
-            });
-
-            jQuery('#parcelshops').on('click', '.go-back', function () {
-                jQuery('#googlemap_shops').show();
-                jQuery('.parcel_modal').hide();
-            });
-
-            var sidebar_item = jQuery("<li><div class='sidebar_single'><strong class='company'>" + shop.company + "</strong><br/><span class='address'>" + shop.street + " " + shop.houseNo + "</span><br/><span class='address'>" + shop.zipCode + " " + shop.city + "</span><br/><strong class='modal-link'><a id='more_info_" + shop.parcelShopId + "' class='more-information'>{/literal}{l s='More information' mod='dpdconnect'}{literal}</a></strong></div></li>");
-
-            sidebar_item.on('click', '.more-information', function () {
-                jQuery('#googlemap_shops').hide();
-                jQuery('#info_' + shop.parcelShopId).show();
-            });
-
-
-            jQuery('#googlemap_shops').append(sidebar_item);
-        });
-
-
-
-        if (!(window.isPageLoaded)) {
-            jQuery('head').append('<script src="https://maps.googleapis.com/maps/api/js?key={/literal}{$key}{literal}&callback=initMap"></s' + 'cript>');
-            window.isPageLoaded = true;
         }
     }
 
-    function initMap() {
-        var styledMapType = new google.maps.StyledMapType(
-            [
-                {
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#f5f5f5"
-                        }
-                    ]
-                },
-                {
-                    "elementType": "labels.icon",
-                    "stylers": [
-                        {
-                            "visibility": "off"
-                        }
-                    ]
-                },
-                {
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#616161"
-                        }
-                    ]
-                },
-                {
-                    "elementType": "labels.text.stroke",
-                    "stylers": [
-                        {
-                            "color": "#f5f5f5"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "administrative.land_parcel",
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#bdbdbd"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "poi",
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#eeeeee"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "poi",
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#757575"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "poi.park",
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#e5e5e5"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "poi.park",
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#9e9e9e"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "road",
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#ffffff"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "road.arterial",
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#757575"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "road.highway",
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#dadada"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "road.highway",
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#616161"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "road.local",
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#9e9e9e"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "transit.line",
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#e5e5e5"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "transit.station",
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#eeeeee"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "water",
-                    "elementType": "geometry",
-                    "stylers": [
-                        {
-                            "color": "#d2e4f3"
-                        }
-                    ]
-                },
-                {
-                    "featureType": "water",
-                    "elementType": "labels.text.fill",
-                    "stylers": [
-                        {
-                            "color": "#9e9e9e"
-                        }
-                    ]
-                }
-            ],
-            {name: 'Styled Map'});
+    function onParcelshopChange(event) {
+        // Prevent jumping to top of page when clicking on 'Change' button of selected parcelshop
+        event.preventDefault();
 
-        // Create a map object, and include the MapTypeId to add
-        // to the map type control.
-        window.map = new google.maps.Map(document.getElementById('googlemap'), {
-            center: {lat: latitude, lng: longitude},
-            zoom: 11,
-            mapTypeControlOptions: {
-                mapTypeIds: ['styled_map']
-            }
-        });
-
-        //Associate the styled map with the MapTypeId and set it to display.
-        window.map.mapTypes.set('styled_map', styledMapType);
-        window.map.setMapTypeId('styled_map');
-
-        setParcelshops(parcelShops);
-    }
-    function setParcelshops(parcelshops) {
-
-        parcelshops.map(function(shop) {
-            var marker_image = new google.maps.MarkerImage('/modules/dpdconnect/img/pickup.png', new google.maps.Size(57, 62), new google.maps.Point(0, 0), new google.maps.Point(0, 31));
-
-            var marker = new google.maps.Marker({
-                position: new google.maps.LatLng(parseFloat(shop.latitude),parseFloat(shop.longitude)),
-                icon: marker_image,
-                map: window.map
-            });
-
-            var infowindow = new google.maps.InfoWindow();
-
-
-            var content = "<img src='/modules/dpdconnect/img/pickup.png'/><strong class='modal-title'>"+shop.company+"</strong><br/>"+ shop.street + " " + shop.houseNo + "<br/>" + shop.zipCode + " " + shop.city + "<hr>";
-            var openingshours = "";
-
-            for (var i = 0; i < shop.openingHours.length; i++) {
-                var openingshours = openingshours + "<div class='modal-week-row'><strong class='modal-day'>" +shop.openingHours[i].weekday + "</strong>" + " "+ "<p>"+ shop.openingHours[i].openMorning + " - " + shop.openingHours[i].closeMorning + "  " + shop.openingHours[i].openAfternoon + " - " + shop.openingHours[i].closeAfternoon +"</p></div>";
-            }
-
-            infowindow.setContent(
-                "<div class='info-modal-content'>" +
-                content +
-                "<strong class='modal-link'><a id='"+shop.parcelShopId+"' class='ParcelShops'>{/literal}{l s='Ship to this parcelshop' mod='dpdconnect'}{literal}</a></strong> " +
-                openingshours +
-                "</div>"
-            );
-            window.infowindows.push(infowindow);
-
-            google.maps.event.addListener(marker, 'click', (function (marker) {
-                return function () {
-                    infowindow.open(window.map, marker);
-                }
-            })(marker));
-
-
-            window.markers.push(marker);
-            $("alert alert-danger").hide();
-        });
+        hideSelectedContainer();
+        showMapContainer();
     }
 
-    function addChosen(parcelId){
-        var verified = false;
-        jQuery(parcelShops).each(function (index, value) {
-            if (value.parcelShopId == parcelId){
-                verified = true;
-                if(jQuery('.selected-parcelshop').length !== 0){
-                    jQuery('.selected-parcelshop').remove();
-                }
-                selectedParcelShop = "<ul class='selected-parcelshop'> <li> <div class='sidebar_single'> <strong class='company'>" + value.company + "</strong> <br> <span class='address'>" + value.street + " " + value.houseNo + "</span> <br /> <span class='address '>" + value.zipCode + " " + value.city + "</span> <br /> </div> </li> </ul>";
-                jQuery('#parcelshops').parent().append(selectedParcelShop);
-            }
-        });
-        if(verified){
-            jQuery("#parcel-id").val(parcelId);
-        }
-
+    function showContainer() {
+        jQuery('#dpd-connect-container').show();
     }
-    {/literal}
+
+    function hideContainer() {
+        jQuery('#dpd-connect-container').hide();
+    }
+
+    function showMapContainer() {
+        DPDConnect.getMapContainer().style.display = 'block';
+    }
+
+    function hideMapContainer() {
+        DPDConnect.getMapContainer().style.display = 'none';
+    }
+
+    function showSelectedContainer() {
+        DPDConnect.getSelectedContainer().style.display = 'block';
+    }
+
+    function hideSelectedContainer() {
+        DPDConnect.getSelectedContainer().style.display = 'none';
+    }
 </script>
+{/literal}
 
 <div class="dpd-alert alert alert-danger">
     <p>{l s='There is 1 error' mod='dpdconnect'}</p>

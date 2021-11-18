@@ -24,11 +24,13 @@ require_once (_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'dpdconnect
 class AdminCarrierWizardController extends AdminCarrierWizardControllerCore
 {
     public $dpdCarrier;
+    public $dpdProductHelper;
 
     public function __construct()
     {
         $dpdconnect = new dpdconnect();
         $this->dpdCarrier = $dpdconnect->dpdCarrier();
+        $this->dpdProductHelper = $dpdconnect->dpdProductHelper;
 
         parent::__construct();
     }
@@ -100,9 +102,12 @@ class AdminCarrierWizardController extends AdminCarrierWizardControllerCore
                 )
             )
         );
-        //own code
-        if ($carrier->id == $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_saturday'))
-            || $carrier->id ==  $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_classic_saturday')) ) {
+
+        // own code
+        // Check if carrier_id supplied in POST is a DPD Saturday Carrier
+        $isDpdSaturdayCarrier = $this->dpdCarrier->isSaturdayCarrier($carrier->id);
+
+        if ($isDpdSaturdayCarrier) {
             $this->fields_form['form']['input'][] = array(
                 'required' => true,
                 'type' => 'select',
@@ -171,9 +176,12 @@ class AdminCarrierWizardController extends AdminCarrierWizardControllerCore
     public function ajaxProcessFinishStep()
     {
         $return = array('has_error' => false);
+
         // own code
-        if ($this->dpdCarrier->ifHasSameReferenceId(Tools::getValue('id_carrier'), Configuration::get('dpdconnect_saturday'))
-            || $this->dpdCarrier->ifHasSameReferenceId(Tools::getValue('id_carrier'), Configuration::get('dpdconnect_classic_saturday'))  ) {
+        // Check if carrier_id supplied in POST is a DPD Saturday Carrier
+        $isDpdSaturdayCarrier = $this->dpdCarrier->isSaturdayCarrier(Tools::getValue('id_carrier'));
+
+        if ($isDpdSaturdayCarrier) {
             if (Tools::getValue('showfromday') === '') {
                 $return['has_error'] = true;
                 $return['errors'][] = $this->l('Show from day is not set!');

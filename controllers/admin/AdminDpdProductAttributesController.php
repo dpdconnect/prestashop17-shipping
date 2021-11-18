@@ -129,6 +129,7 @@ class AdminDpdProductAttributesController extends ModuleAdminController
         $helper->fields_value['hs_code'] = null;
         $helper->fields_value['customs_value'] = null;
         $helper->fields_value['country_of_origin'] = null;
+        $helper->fields_value['age_check'] = null;
 
         $id = Tools::getValue('id_dpd_product_attributes');
 
@@ -203,7 +204,7 @@ class AdminDpdProductAttributesController extends ModuleAdminController
         $sql = 'UPDATE ' ._DB_PREFIX_ . 'dpd_product_attributes 
                    SET hs_code =' . $hsCode . ', 
                        customs_value = ' . $customsValue . ',
-                       country_of_origin = "' . $countryOfOrigin . '"
+                       country_of_origin = "' . $countryOfOrigin . '",
                        age_check = "' . $ageCheck . '"
                  WHERE id_dpd_product_attributes = ' . $id;
         try {

@@ -39,9 +39,8 @@ class DpdParcelPredict
      * @var \DpdConnect\Sdk\Client
      */
     public $dpdClient;
-    public $Gmaps;
-    public $DpdAuthentication;
     private $dpdCarrier;
+    private $dpdProductHelper;
 
     public function __construct()
     {
@@ -68,219 +67,75 @@ class DpdParcelPredict
             $this->dpdClient->getAuthentication()->setJwtToken($jwtToken);
         });
 
-        $this->Gmaps = new Gmaps();
-
         $dpdCarrier       = new DpdCarrier();
         $this->dpdCarrier = $dpdCarrier;
+        $this->dpdProductHelper = new DpdProductHelper();
     }
-
-    public function getGeoData($postalCode, $isoCode)
-    {
-        return $this->Gmaps->getGeoData($postalCode, $isoCode);
-    }
-
-    public function getParcelShops($postalCode, $isoCode)
-    {
-        if (!$postalCode) {
-            return;
-        }
-
-        try {
-        $coordinates = $this->getGeoData($postalCode, $isoCode);
-        $coordinates['countryIso'] = $isoCode;
-        $parcelShops = $this->dpdClient->getParcelShop()->getList($coordinates);
-        } catch (AuthenticateException $exception) {
-            // Log error to the database
-            \PrestaShopLoggerCore::addLog($exception->getMessage(), 3, null, 'DPDConnect');
-            return false;
-        }
-
-        //Make openingHours translateable
-        foreach ($parcelShops as $key => $parcelShop) {
-            foreach($parcelShop['openingHours'] as $openingHourKey => $openingHour) {
-                switch ($openingHour['weekday']) {
-                    case 'maandag':
-                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Monday');
-                        break;
-                    case 'dinsdag':
-                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Tuesday');
-                        break;
-                    case 'woensdag':
-                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Wednesday');
-                        break;
-                    case 'donderdag':
-                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Thursday');
-                        break;
-                    case 'vrijdag':
-                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Friday');
-                        break;
-                    case 'zaterdag':
-                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Saturday');
-                        break;
-                    case 'zondag':
-                        $parcelShops[$key]['openingHours'][$openingHourKey]['weekday'] = $this->dpdCarrier->l('Sunday');
-                        break;
-                }
-            }
-        }
-
-        return $parcelShops;
-    }
-
 
     public function getParcelShopId($orderId)
     {
         return Db::getInstance()->getValue("SELECT parcelshop_id FROM " . _DB_PREFIX_ . "parcelshop WHERE order_id = " . pSQL($orderId));
     }
 
+    // Check if order is sent by a DPD Carrier
     public function checkIfDpdSending($orderId)
     {
-        if ($this->checkIfParcelSending($orderId) ||
-            $this->checkIfSaturdayCarrier($orderId)||
-            $this->checkIfClassicSaturdayCarrier($orderId) ||
-            $this->checkIfPredictCarrier($orderId) ||
-            $this->checkIfExpress12Carrier($orderId)||
-            $this->checkIfExpress10Carrier($orderId) ||
-            $this->checkIfGuarantee18Carrier($orderId) ||
-            $this->checkIfClassicCarrier($orderId)
-        ) {
-            return true;
-        }
+        $order = new Order($orderId);
+        $orderCarrier = new Carrier($order->id_carrier);
 
-        return false;
+        return $this->dpdProductHelper->isDpdCarrier($orderCarrier->id_reference);
     }
 
+    // Check if order is sent by a DPD Carrier which uses a DPD Parcelshop Product
     public function checkIfParcelSending($orderId)
     {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
+        $order = new Order($orderId);
+        $orderCarrier = new Carrier($order->id_carrier);
 
-        $dpdParcelshopCarrierId = Configuration::get('dpdconnect_parcelshop');
+        $dpdProduct = $this->dpdProductHelper->getProductByCarrier($orderCarrier->id_reference);
 
-        if ($tempCarrierReferenceId == $dpdParcelshopCarrierId) {
-            return true;
-        } else {
+        if (!$dpdProduct) {
             return false;
         }
+
+        return strtolower($dpdProduct['type']) === 'parcelshop';
     }
 
+    // Check if order has parcelshop id and is sent by a DPD Parcelshop Carrier
     public function checkIfParcelCarrier($orderId)
     {
         $parcelShopId = $this->getParcelShopId($orderId);
-        $dpdParcelshopCarrierId = $this->checkIfParcelSending($orderId);
+        $isDpdParcelshopOrder = $this->checkIfParcelSending($orderId);
 
-        if (($parcelShopId != null) && ($dpdParcelshopCarrierId)) {
-            $result = true;
-        } else {
-            $result = false;
-        }
-        return $result;
+        return $parcelShopId && $isDpdParcelshopOrder;
     }
 
-    public static function checkIfPredictCarrier($orderId)
+    public function checkIfPredictCarrier($orderId)
     {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrerreferenceId = $tempCarrier->id_reference;
+        $order = new Order($orderId);
+        $orderCarrier = new Carrier($order->id_carrier);
 
-        $dpdPredictCarrierId = Configuration::get('dpdconnect_predict');
+        $dpdProduct = $this->dpdProductHelper->getProductByCarrier($orderCarrier->id_reference);
 
-        if ($tempCarrerreferenceId == $dpdPredictCarrierId) {
-            return true;
-        } else {
+        if (!$dpdProduct) {
             return false;
         }
+
+        return strtolower($dpdProduct['type']) === 'predict';
     }
 
     public function checkIfSaturdayCarrier($orderId)
     {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
+        $order = new Order($orderId);
+        $orderCarrier = new Carrier($order->id_carrier);
 
-        $dpdSaturdayCarrierId = Configuration::get('dpdconnect_saturday');
+        $dpdProduct = $this->dpdProductHelper->getProductByCarrier($orderCarrier->id_reference);
 
-        if ($tempCarrierReferenceId == $dpdSaturdayCarrierId) {
-            return true;
-        } else {
+        if (!$dpdProduct) {
             return false;
         }
-    }
 
-    public function checkIfClassicSaturdayCarrier($orderId)
-    {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
-
-        $dpdClassicSaturdayCarrierId = Configuration::get('dpdconnect_classic_saturday');
-
-        if ($tempCarrierReferenceId == $dpdClassicSaturdayCarrierId) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function checkIfExpress12Carrier($orderId)
-    {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
-
-        $dpdExpress12CarrierId = Configuration::get('dpdconnect_express12');
-
-        if ($tempCarrierReferenceId == $dpdExpress12CarrierId) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function checkIfExpress10Carrier($orderId)
-    {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
-
-        $dpdExpress10CarrierId = Configuration::get('dpdconnect_express10');
-
-        if ($tempCarrierReferenceId == $dpdExpress10CarrierId) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function checkIfGuarantee18Carrier($orderId)
-    {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
-
-        $dpdGuarantee18CarrierId = Configuration::get('dpdconnect_guarantee18');
-
-        if ($tempCarrierReferenceId == $dpdGuarantee18CarrierId) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function checkIfClassicCarrier($orderId)
-    {
-        $tempOrder = new Order($orderId);
-        $tempCarrier = new Carrier($tempOrder->id_carrier);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
-
-        $dpdClassicCarrierId = Configuration::get('dpdconnect_classic');
-
-        if ($tempCarrierReferenceId == $dpdClassicCarrierId) {
-            return true;
-        } else {
-            return false;
-        }
+        return stripos($dpdProduct['name'], 'saturday') !== false;
     }
 
     public function getLabelNumbersAndWeigth($orderId)

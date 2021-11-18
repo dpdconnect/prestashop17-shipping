@@ -30,14 +30,18 @@ class DpdDeliveryOptionsFinder extends DeliveryOptionsFinder
     public function getDeliveryOptions()
     {
         $this->dpdCarrier = new DpdCarrier();
+        $this->dpdProductHelper = new DpdProductHelper();
+
         $carriers_available = parent::getDeliveryOptions();
 
-        $saturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_saturday'));
-        $classicSaturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_classic_saturday'));
-
         if (!$this->dpdCarrier->checkIfSaturdayAllowed()) {
-            unset($carriers_available[$saturdayCarrierId . ',']);
-            unset($carriers_available[$classicSaturdayCarrierId . ',']);
+            foreach ($carriers_available as $key => $availableCarrier) {
+                $availableCarrierId = str_replace(',', '', $key);
+
+                if ($this->dpdCarrier->isSaturdayCarrier($availableCarrierId)) {
+                    unset($carriers_available[$key]);
+                }
+            }
         }
 
         return $carriers_available;
