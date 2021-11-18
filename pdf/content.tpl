@@ -1,14 +1,14 @@
 <table>
     <thead>
     <tr>
-        <td style="{$styleth}">Nr.</td>
-        <td style="{$styleth}">Pakket Nr.</td>
-        <td style="{$styleth}">Type verzending</td>
-        <td style="{$styleth}">Bedrijf en naam</td>
-        <td style="{$styleth}">Adres</td>
-        <td style="{$styleth}">Postcode</td>
-        <td style="{$styleth}">Plaats</td>
-        <td style="{$styleth}">Referentienummer</td>
+        <td style="{$styleth}">{l s='No.' mod='dpdconnect'}</td>
+        <td style="{$styleth}">{l s='Labelnumber' mod='dpdconnect'}</td>
+        <td style="{$styleth}">{l s='Carrier' mod='dpdconnect'}</td>
+        <td style="{$styleth}">{l s='Company and name' mod='dpdconnect'}</td>
+        <td style="{$styleth}">{l s='Address' mod='dpdconnect'}</td>
+        <td style="{$styleth}">{l s='Postal code' mod='dpdconnect'}</td>
+        <td style="{$styleth}">{l s='Place' mod='dpdconnect'}</td>
+        <td style="{$styleth}">{l s='Reference number' mod='dpdconnect'}</td>
     </tr>
     </thead>
     <tbody>
@@ -27,5 +27,5 @@
     </tbody>
 </table>
 {if empty($list)}
-    Geen DPD verzending geselecteerd.
+    {l s='No DPD shipment selected.' mod='dpdconnect'}
 {/if}

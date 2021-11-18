@@ -21,6 +21,7 @@ namespace DpdConnect\classes;
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use DpdConnect\classes\Connect\Connection;
 use Hook;
 use Address;
 use Context;
@@ -33,12 +34,16 @@ class DpdCheckoutDeliveryStep extends CheckoutDeliveryStep
 {
     public $dpdParcelPredict;
     public $dpdCarrier;
+    public $dpdProductHelper;
+    private $connection;
 
     public function __construct(Context $context, TranslatorInterface $translator)
     {
         parent::__construct($context, $translator);
         $this->dpdParcelPredict = new DpdParcelPredict();
         $this->dpdCarrier = new DpdCarrier();
+        $this->dpdProductHelper = new DpdProductHelper();
+        $this->connection = new Connection();
     }
 
     public function render(array $extraParams = array())
@@ -80,34 +85,63 @@ class DpdCheckoutDeliveryStep extends CheckoutDeliveryStep
         $isoCode = $country->iso_code;
 
 
-        $geoData = $this->dpdParcelPredict->getGeoData($address->postcode, $isoCode);
-        $parcelShops = json_encode($this->dpdParcelPredict->getParcelShops($address->postcode, $isoCode));
-
         // prevent attempts at getting parcelshops before enough data is available
         if (!$address->postcode) {
             return $templates;
         }
 
-        $link = new \Link();
+        $useDpdKey = Configuration::get('dpdconnect_use_dpd_key') == 1;
 
-        $parcelShopInfo = array(
-            'baseUri' => __PS_BASE_URI__,
-            'parcelshopId' => $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get("dpdconnect_parcelshop")),
-            'sender' => $this->context->cart->id_carrier,
-            'key' => Configuration::get('gmaps_client_key'),
-            'longitude' => $geoData['longitude'],
-            'latitude' => $geoData['latitude'],
-            'cookieParcelId' => $this->context->cookie->parcelId,
-        );
-        $this->context->smarty->assign($parcelShopInfo);
+        $mapsKey = '';
+        if (!$useDpdKey) {
+            $mapsKey = Configuration::get('gmaps_key');
+        }
+
+        $link = new \Link();
         $this->context->smarty->assign([
-            'parcelshops' => $parcelShops,
-            'oneStepParcelshopUrl' => $link->getModuleLink('dpdconnect', 'OneStepParcelshop')
+            'baseUri' => __PS_BASE_URI__,
+            'parcelshopId' => $this->dpdCarrier->getLatestCarrierByReferenceId($this->dpdProductHelper->getDpdParcelshopCarrierId()),
+            'sender' => $this->context->cart->id_carrier,
+            'shippingAddress' => sprintf('%s %s %s', $address->address1, $address->postcode, $address->country),
+            'dpdPublicToken' => $this->connection->getPublicJwtToken(),
+            'shopCountryCode' => $this->context->language->iso_code,
+            'mapsKey' => $mapsKey,
+            'cookieParcelId' => $this->context->cookie->parcelId,
+            'oneStepParcelshopUrl' => $link->getModuleLink('dpdconnect', 'OneStepParcelshop'),
+            'dpdParcelshopMapUrl' => Configuration::get('dpdconnect_url') . '/parcelshop/map/js',
         ]);
 
         $templates .= $this->renderTemplate(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . '1.7' . DIRECTORY_SEPARATOR . '_dpdLocator1.7.tpl');
 
         file_put_contents('log.txt', print_r($this->context->cookie, true));
         return $templates;
+    }
+
+    public function handleRequest(array $requestParams = [])
+    {
+        // Add custom validation to check if a parcelshop is selected when parcelshop carrier is chosen
+        if ($this->isReachable() && isset($requestParams['confirmDeliveryOption'])) {
+            $selectedDeliveryOption = $this->getCheckoutSession()->getSelectedDeliveryOption();
+
+            // Delivery option always ends with a ','. Remove this so we can use it for comparing
+            $carrierId = str_replace(',', '', $selectedDeliveryOption);
+
+            // Check if selected carrier is parcelshop carrier
+            if ((int)$carrierId === (int)$this->dpdCarrier->getLatestCarrierByReferenceId($this->dpdProductHelper->getDpdParcelshopCarrierId())) {
+
+                // Check if parcelshop id is set in cookie
+                if (empty($this->context->cookie->parcelId)) {
+                    $this->setComplete(false);
+                    $controller = $this->context->controller;
+                    if (isset($controller)) {
+                        $controller->errors[] = 'Please select a parcelshop';
+                    }
+
+                    return;
+                }
+            }
+        }
+
+        parent::handleRequest($requestParams);
     }
 }

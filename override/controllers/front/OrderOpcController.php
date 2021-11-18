@@ -18,14 +18,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 require_once (_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'DpdCarrier.php');
+require_once (_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR . 'DpdProductHelper.php');
 class OrderOpcController extends OrderOpcControllerCore
 {
 	public $dpdCarrier;
+	public $dpdProductHelper;
 
 	public function __construct()
 	{
 		parent::__construct();
 		$this->dpdCarrier = new DpdCarrier();
+        $this->dpdProductHelper = new DpdProductHelper();
 	}
 
 	protected function _assignCarrier()
@@ -41,14 +44,17 @@ class OrderOpcController extends OrderOpcControllerCore
 		$this->setDefaultCarrierSelection($delivery_option_list);
 //        unset($delivery_option_list);
 
-		$saturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_saturday'));
-		$classicSaturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_classic_saturday'));
-
 		foreach($delivery_option_list as &$carriers){
-			if(!$this->dpdCarrier->checkIfSaturdayAllowed()) {
-				unset($carriers[$saturdayCarrierId . ',']);
-				unset($carriers[$classicSaturdayCarrierId . ',']);
-			}
+            if (!$this->dpdCarrier->checkIfSaturdayAllowed()) {
+
+                foreach ($carriers as $key => $availableCarrier) {
+                    $availableCarrierId = str_replace(',', '', $key);
+
+                    if ($this->dpdCarrier->isSaturdayCarrier($availableCarrierId)) {
+                        unset($carriers[$key]);
+                    }
+                }
+            }
 		}
 
 		$this->context->smarty->assign(array(

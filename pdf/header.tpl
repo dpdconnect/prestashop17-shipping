@@ -19,14 +19,14 @@
 <table style="width: 100%; ">
     <tr>
         <td style=" text-align: left; ">
-            <br /> Klantadres
+            <br /> {l s='Customer address' mod='dpdconnect'}
             <br /> {$company_name}
             <br /> {$company_street}
             <br /> {$company_country}-{$company_postalcode} {$company_place}
         </td>
         <td style="text-align: left;">
-            <br /> Datum: {$date_now}
-            <br /> Aantal pakketten: {$amount}
+            <br /> {l s='Date' mod='dpdconnect'}: {$date_now}
+            <br /> {l s='Amount of parcels' mod='dpdconnect'}: {$amount}
         </td>
         <td style=" text-align: right; ">
             {if $logo_path}

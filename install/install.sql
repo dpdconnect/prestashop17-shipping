@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS `_PREFIX_dpd_product_attributes` (
   `hs_code` varchar(255) NOT NULL,
   `country_of_origin` varchar(255) NOT NULL,
   `customs_value` int NOT NULL,
+  `age_check` varchar(255) NOT NULL,
   PRIMARY KEY (`id_dpd_product_attributes`),
   UNIQUE (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
@@ -71,4 +72,16 @@ CREATE TABLE IF NOT EXISTS `_PREFIX_dpd_jobs` (
   PRIMARY KEY id (id_dpd_jobs),
   INDEX created_at (created_at),
   INDEX batch_id (batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+
+ALTER TABLE `_PREFIX_product`
+    ADD `dpd_shipping_product` VARCHAR(255) NOT NULL DEFAULT 'default',
+    ADD `dpd_carrier_description` TEXT NULL DEFAULT NULL;
+
+-- Create table for mapping carriers to dpd products
+CREATE TABLE IF NOT EXISTS `_PREFIX_carrier_dpd_product` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `carrier_id` int(11) NOT NULL,
+    `dpd_product_code` varchar(255) NOT NULL,
+    PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;

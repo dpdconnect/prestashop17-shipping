@@ -18,7 +18,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use DpdConnect\classes\DpdCarrier;
 
 require_once(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'dpdconnect.php');
 
@@ -26,15 +25,20 @@ class DeliveryOptionsFinder extends DeliveryOptionsFinderCore
 {
     public function getDeliveryOptions()
     {
-        $this->dpdCarrier = new DpdCarrier();
+        $dpdconnect = new dpdconnect();
+        $this->dpdCarrier = $dpdconnect->dpdCarrier;
+        $this->dpdProductHelper = $dpdconnect->dpdProductHelper;
+
         $carriers_available = parent::getDeliveryOptions();
 
-        $saturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_saturday'));
-        $classicSaturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_classic_saturday'));
-
         if (!$this->dpdCarrier->checkIfSaturdayAllowed()) {
-            unset($carriers_available[$saturdayCarrierId . ',']);
-            unset($carriers_available[$classicSaturdayCarrierId . ',']);
+            foreach ($carriers_available as $key => $availableCarrier) {
+                $availableCarrierId = str_replace(',', '', $key);
+
+                if ($this->dpdCarrier->isSaturdayCarrier($availableCarrierId)) {
+                    unset($carriers_available[$key]);
+                }
+            }
         }
 
         return $carriers_available;

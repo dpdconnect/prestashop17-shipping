@@ -86,12 +86,11 @@ class DpdShippingList
                     $postcode = $tempAddres->postcode;
                     $city = $tempAddres->city;
 
-                    // change the name of the carrier
-                    $carrierName = $this->dpdCarrier->getShortNameShipping($order->id_carrier);
+                    $carrier = new \Carrier($order->id_carrier);
 
                     $parcel = array(
-                        'parcelLabelNumber' => $parcelLabelNumber,
-                        'carrierName' => $carrierName,
+                        'parcelLabelNumber' => reset($parcelLabelNumber),
+                        'carrierName' => $carrier->name,
                         'customerName' => $name,
                         'address' => $street,
                         'postcode' => $postcode,

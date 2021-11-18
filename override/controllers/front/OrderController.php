@@ -28,6 +28,7 @@ class OrderController extends OrderControllerCore
     public $dpdconnect;
 
     public $dpdCarrier;
+    public $dpdProductHelper;
 
     public function __construct()
     {
@@ -35,6 +36,7 @@ class OrderController extends OrderControllerCore
 
         $this->dpdconnect = new dpdconnect();
         $this->dpdCarrier = $this->dpdconnect->dpdCarrier();
+        $this->dpdProductHelper = $this->dpdconnect->dpdProductHelper;
     }
 
     public function _assignWrappingAndTOS()
@@ -42,13 +44,16 @@ class OrderController extends OrderControllerCore
         parent::_assignWrappingAndTOS();
         $deliveryOptionList = $this->context->cart->getDeliveryOptionList();
 
-        $saturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_saturday'));
-        $classicSaturdayCarrierId = $this->dpdCarrier->getLatestCarrierByReferenceId(Configuration::get('dpdconnect_classic_saturday'));
-
         foreach ($deliveryOptionList as &$carriers) {
             if (!$this->dpdCarrier->checkIfSaturdayAllowed()) {
-                unset($carriers[$saturdayCarrierId . ',']);
-                unset($carriers[$classicSaturdayCarrierId . ',']);
+
+                foreach ($carriers as $key => $availableCarrier) {
+                    $availableCarrierId = str_replace(',', '', $key);
+
+                    if ($this->dpdCarrier->isSaturdayCarrier($availableCarrierId)) {
+                        unset($carriers[$key]);
+                    }
+                }
             }
         }
 

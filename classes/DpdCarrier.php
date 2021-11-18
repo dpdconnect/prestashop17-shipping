@@ -24,123 +24,69 @@ namespace DpdConnect\classes;
 use Db;
 use Carrier;
 use DbQuery;
-use Exception;
+use DpdConnect\classes\Connect\Product;
 use CarrierModule;
 use Configuration;
 
 class DpdCarrier extends CarrierModule
 {
-    public $carrierNames;
+    public $dpdProductHelper;
     public $dpdPrefix;
 
     public function __construct()
     {
+        $this->dpdProductHelper = new DpdProductHelper();
         $this->dpdPrefix = 'dpdconnect_';
-
-        $this->carrierNames['predict'] = [
-            'name' => 'DPD Predict',
-            'description' => $this->l('DPD predict delivery'),
-            'type' => 'b2c'
-        ];
-
-        $this->carrierNames['parcelshop'] = [
-            'name' => 'DPD Parcelshop',
-            'description' => $this->l('deliver it at a Parcelshop'),
-            'type' => 'b2c'
-        ];
-
-        $this->carrierNames['saturday'] = [
-            'name' => 'DPD Zaterdag',
-            'description' => $this->l('only deliver at a saturday'),
-            'type' => 'b2c',
-        ];
-
-        $this->carrierNames['classic_saturday'] = [
-            'name' => 'DPD Classic Zaterdag',
-            'description' =>  $this->l('only deliver at a saturday'),
-            'type' => 'b2b'
-        ];
-
-        $this->carrierNames['classic'] = [
-            'name' => 'DPD Classic',
-            'description' =>  $this->l('DPD classic delivery'),
-            'type' => 'b2b'
-        ];
-
-        $this->carrierNames['guarantee18'] = [
-            'name' => 'Guarantee 18:00',
-            'description' =>  $this->l('DPD Guarantee 18:00 delivery'),
-            'type' => 'b2b'
-        ];
-
-        $this->carrierNames['express12'] = [
-            'name' => 'Express 12:00',
-            'description' =>  $this->l('DPD Express 12:00 delivery'),
-            'type' => 'b2b'
-        ];
-
-        $this->carrierNames['express10'] = [
-            'name' => 'Express 10:00',
-            'description' =>  $this->l('DPD Express 10:00 delivery'),
-            'type' => 'b2b'
-        ];
     }
 
     public function createCarriers()
     {
-        foreach ($this->carrierNames as $prefix => $info) {
-            if (!Configuration::get($this->dpdPrefix . strtolower($prefix))) {
-                $carrier = new Carrier();
+        $dpdProducts = [];
+        try {
+            $connectProduct = new Product();
+            $dpdProducts = $connectProduct->getList();
+        } catch (\Exception $exception) {
+            return true;
+        }
 
-                $carrier->url ='//tracking.dpd.de/parcelstatus?query=@';
-                $carrier->name = $info['name'];
-                $carrier->delay[Configuration::get('PS_LANG_DEFAULT')] = (string)$info['description'];
-                $carrier->active = 0;
-                $carrier->deleted = 1;
-                $carrier->shipping_handling = 1;
-                $carrier->range_behavior = 0;
-                $carrier->shipping_external = 0;
-                $carrier->add();
-                $carrier->id_reference = $carrier->id;
-                $carrier->update();
-                Configuration::updateValue($this->dpdPrefix . strtolower($prefix), $carrier->id);
-//                  copy(dirname(__DIR__) . '/../logo.png', _PS_SHIP_IMG_DIR_ . '/' . (int)$carrier->id . '.jpg'); //assign carrier logo
+//        foreach ($dpdProducts as $dpdProduct) {
+//            $carrier = $this->dpdProductHelper->getCarrierByProduct($dpdProduct);
+//
+//            // Carrier for this product exists, but is soft-deleted
+//            if ($carrier) {
+//                $this->unDeleteCarrier($carrier['carrier_id']);
+//            } else {
+//                // Carrier for this product does not exist, so we create a new one
+//                $this->createCarrier($dpdProduct);
+//            }
+//        }
+
+        $existingDpdCarriers = $this->dpdProductHelper->getDpdCarriers();
+        // Undo soft-delete on existing DPD Carriers if they exist
+        if ($existingDpdCarriers) {
+
+            foreach ($existingDpdCarriers as $existingDpdCarrier) {
+                // Prevent undeleting carriers that use a disabled DPD Product
+                if (in_array($existingDpdCarrier['dpd_product_code'], array_column($dpdProducts, 'code'))) {
+                    $this->unDeleteCarrier($this->getLatestCarrierByReferenceId($existingDpdCarrier['carrier_id'], false));
+                }
             }
         }
-        $this->setCarrierForAccountType();
+
         return true;
     }
 
-    public function setCarrierForAccountType()
-    {
-        $accountType = Configuration::get($this->dpdPrefix . 'account_type');
-
-        foreach ($this->carrierNames as $prefix => $info) {
-            $configCarrierId = Configuration::get($this->dpdPrefix . $prefix);
-
-            $carrierId = $this->getLatestCarrierByReferenceId($configCarrierId, false);
-            if ($info['type'] == $accountType) {
-                $this->unDeleteCarrier($carrierId);
-            } else {
-                $this->softDeleteCarriers($carrierId);
-            }
-        }
-    }
-
-
     public function deleteCarriers()
     {
-        foreach ($this->carrierNames as $prefix => $info) {
-            $carrier_id = $this->getLatestCarrierByReferenceId(Configuration::get($this->dpdPrefix . strtolower($prefix)));
-            if ($this->softDeleteCarriers($carrier_id)) {
-                $output = true;
-            } else {
-                $output = false;
-            }
-        }
+        $dpdCarriers = $this->dpdProductHelper->getDpdCarriers();
 
-        return $output;
+        array_walk($dpdCarriers, function ($dpdCarrier) {
+            $this->softDeleteCarriers($this->getLatestCarrierByReferenceId($dpdCarrier['carrier_id']));
+        });
+
+        return true;
     }
+
     public function getLatestCarrierByReferenceId($id_carrier, $except_deleted = true)
     {
         if ($id_carrier === false) {
@@ -170,6 +116,30 @@ class DpdCarrier extends CarrierModule
         return $tempCarrier->id_reference  == $referenceId;
     }
 
+    public function createCarrier(array $dpdProduct)
+    {
+        $carrier = new Carrier();
+
+        $carrier->url ='//tracking.dpd.de/parcelstatus?query=@';
+        $carrier->name = $dpdProduct['name'];
+        $carrier->delay[Configuration::get('PS_LANG_DEFAULT')] = (string)$dpdProduct['description'] ?: (string)$dpdProduct['name'];
+        $carrier->active = 0;
+        $carrier->deleted = 0;
+        $carrier->shipping_handling = 1;
+        $carrier->range_behavior = 0;
+        $carrier->shipping_external = 0;
+        $carrier->add();
+        $carrier->id_reference = $carrier->id;
+        $carrier->update();
+
+//        Configuration::updateValue($this->dpdPrefix . strtolower($prefix), $carrier->id);
+
+        $dpdProductHelper = new DpdProductHelper();
+        $dpdProductHelper->mapProductToCarrier($dpdProduct, $carrier->id);
+
+        return $carrier;
+    }
+
     public function softDeleteCarriers($carrier_id)
     {
         Db::getInstance()->update('carrier', array('deleted' => 1), 'id_carrier = '. pSQL($carrier_id));
@@ -180,6 +150,19 @@ class DpdCarrier extends CarrierModule
     {
         Db::getInstance()->update('carrier', array('deleted' => 0), 'id_carrier = '. pSQL($carrier_id));
         return true;
+    }
+
+    public function isSaturdayCarrier($carrierId)
+    {
+        $carrier = new Carrier($carrierId);
+
+        $dpdProduct = $this->dpdProductHelper->getProductByCarrier($carrier->id_reference);
+
+        if (!$dpdProduct) {
+            return false;
+        }
+
+        return stripos($dpdProduct['name'], 'saturday') !== false;
     }
 
     public function checkIfSaturdayAllowed()
@@ -209,29 +192,5 @@ class DpdCarrier extends CarrierModule
 
     public function getOrderShippingCostExternal($params)
     {
-    }
-
-    public function getShortNameShipping($carrierId)
-    {
-        $tempCarrier = new Carrier($carrierId);
-        $tempCarrierReferenceId = $tempCarrier->id_reference;
-
-        foreach ($this->carrierNames as $prefix => $info) {
-            if (Configuration::get($this->dpdPrefix . $prefix) == $tempCarrierReferenceId) {
-                if ($prefix == 'guarantee18') {
-                    return 'DPD 18';
-                } elseif ($prefix == 'classic_saturday') {
-                    return 'DPD B2B Sat';
-                } elseif ($prefix == 'saturday') {
-                    return 'DPD B2C Sat';
-                } elseif ($prefix == 'express12') {
-                    return 'DPD 12';
-                } elseif ($prefix == 'express10') {
-                    return 'DPD 10';
-                } else {
-                    return $tempCarrier->name;
-                }
-            }
-        }
     }
 }
