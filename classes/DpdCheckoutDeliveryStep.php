@@ -22,6 +22,7 @@ namespace DpdConnect\classes;
  */
 
 use DpdConnect\classes\Connect\Connection;
+use DpdConnect\Sdk\Client;
 use Hook;
 use Address;
 use Context;
@@ -108,7 +109,7 @@ class DpdCheckoutDeliveryStep extends CheckoutDeliveryStep
             'mapsKey' => $mapsKey,
             'cookieParcelId' => $this->context->cookie->parcelId,
             'oneStepParcelshopUrl' => $link->getModuleLink('dpdconnect', 'OneStepParcelshop'),
-            'dpdParcelshopMapUrl' => Configuration::get('dpdconnect_url') . '/parcelshop/map/js',
+            'dpdParcelshopMapUrl' => Configuration::get('dpdconnect_url', Client::ENDPOINT) . '/parcelshop/map/js',
         ]);
 
         $templates .= $this->renderTemplate(_PS_MODULE_DIR_ . 'dpdconnect' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'templates' . DIRECTORY_SEPARATOR . '1.7' . DIRECTORY_SEPARATOR . '_dpdLocator1.7.tpl');

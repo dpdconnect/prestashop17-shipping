@@ -154,6 +154,10 @@ class DpdCarrier extends CarrierModule
 
     public function isSaturdayCarrier($carrierId)
     {
+        if (!$carrierId) {
+            return false;
+        }
+
         $carrier = new Carrier($carrierId);
 
         $dpdProduct = $this->dpdProductHelper->getProductByCarrier($carrier->id_reference);
