@@ -131,6 +131,7 @@ class dpdconnect extends Module
         if (parent::install()) {
             Configuration::updateValue('dpd', 'dpdconnect');
             Configuration::updateValue('dpdconnect_parcel_limit', 12);
+            Configuration::updateValue('dpdconnect_label_format', 'A4');
         }
         if (!$this->dpdHelper->installDB()) {
             //TODO create log that database could not be installed.
@@ -212,6 +213,7 @@ class dpdconnect extends Module
             $connecturl = strval(Tools::getValue("dpdconnect_url"));
             $callbackUrl = Tools::getValue('callback_url');
             $asyncTreshold = Tools::getValue('async_treshold');
+            $labelFormat = Tools::getValue('label_format');
 
             if (!(
                empty($company) ||
@@ -247,6 +249,7 @@ class dpdconnect extends Module
                 Configuration::updateValue('dpdconnect_url', $connecturl);
                 Configuration::updateValue('dpdconnect_callback_url', $callbackUrl);
                 Configuration::updateValue('dpdconnect_async_treshold', $asyncTreshold);
+                Configuration::updateValue('dpdconnect_label_format', $labelFormat);
                 $output .= $this->displayConfirmation($this->l('Settings updated'));
             } else {
                 $output .= $this->displayError($this->l('Invalid Configuration value'));
@@ -304,6 +307,27 @@ class dpdconnect extends Module
                     ),
 
                 ],
+                [
+                    'type' => 'select',
+                    'label' => $this->l('Label format'),
+                    'desc' => $this->l('Choose between A4 or A6 shipping labels.'),
+                    'name' => 'label_format',
+                    'required' => true,
+                    'options' => array(
+                        'query' =>  array(
+                            array(
+                                'id_option' => 1,
+                                'name' => 'A4'
+                            ),
+                            array(
+                                'id_option' => 2,
+                                'name' => 'A6'
+                            )
+                        ),
+                        'id' => 'id_option',
+                        'name' => 'name'
+                    )
+                ]
             ],
         ];
 
