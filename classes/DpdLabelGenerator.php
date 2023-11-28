@@ -513,10 +513,16 @@ class DpdLabelGenerator
 
     private function requestLabels($labelRequests, $return)
     {
+        if (Configuration::Get('dpdconnect_label_format') == 2) {
+            $paperFormat = 'A6';
+        } else {
+            $paperFormat = 'A4';
+        }
+
         $request = [
             'printOptions' => [
                 'printerLanguage' => 'PDF',
-                'paperFormat' => 'A4',
+                'paperFormat' => $paperFormat,
                 'verticalOffset' => 0,
                 'horizontalOffset' => 0,
             ],
